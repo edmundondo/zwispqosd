@@ -1,0 +1,3604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="app-version" content="1.1.1">
+<title>Zimbabwe ISP Tracker</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#121821;
+    --panel2:#161d28;
+    --border:#232c3a;
+    --text:#e8edf4;
+    --muted:#8493a8;
+    --accent:#4fd1c5;
+    --accent2:#7c9cff;
+    --green:#3ecf8e;
+    --yellow:#e8b93f;
+    --red:#e8615f;
+    --red-dark:#7a1e1e;
+    --grey:#5c6b80;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(circle at 20% -10%, #182233 0%, var(--bg) 45%) fixed;
+    color:var(--text);
+    min-height:100vh;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:980px;margin:0 auto;}
+  header{margin-bottom:28px;}
+  .eyebrow{
+    font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin-bottom:8px;
+  }
+  h1{font-size:30px;margin:0 0 6px;font-weight:700;letter-spacing:-0.01em;}
+  .sub{color:var(--muted);font-size:14px;}
+  .privacy-note{
+    margin-top:10px;font-size:12px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:8px 12px;display:inline-block;
+  }
+  .backend-banner{
+    margin-top:10px;font-size:12px;font-weight:600;border-radius:10px;
+    padding:9px 14px;display:inline-block;border:1px solid transparent;
+  }
+  .backend-banner.mode-local{background:rgba(232,185,63,.12);color:var(--yellow);border-color:rgba(232,185,63,.35);}
+  .backend-banner.mode-connecting{background:rgba(124,156,255,.12);color:var(--accent2);border-color:rgba(124,156,255,.35);}
+  .backend-banner.mode-live{background:rgba(62,207,142,.12);color:var(--green);border-color:rgba(62,207,142,.35);}
+  .backend-banner.mode-error{background:rgba(232,97,95,.12);color:var(--red);border-color:rgba(232,97,95,.35);}
+
+  .lang-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;}
+  .lang-label-text{font-size:12px;color:var(--muted);margin-right:2px;}
+  .need-translate{font-size:11px;opacity:.85;}
+
+  .stats{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:12px;margin:24px 0;
+  }
+  .stat{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .stat .num{font-size:22px;font-weight:700;}
+  .stat .lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+
+  .toolbar{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    margin-bottom:18px;
+  }
+  .search{
+    flex:1 1 220px;
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:10px 14px;color:var(--text);font-size:14px;outline:none;
+  }
+  .search:focus{border-color:var(--accent2);}
+  .chip{
+    background:var(--panel);border:1px solid var(--border);border-radius:999px;
+    padding:8px 14px;font-size:13px;color:var(--muted);cursor:pointer;
+    transition:.15s;user-select:none;
+  }
+  .chip.active{background:var(--accent2);border-color:var(--accent2);color:#0b0f14;font-weight:600;}
+  .chip:hover{border-color:var(--accent2);}
+  .spacer{flex:1 1 auto;}
+  .btn{
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;
+    padding:9px 14px;font-size:13px;color:var(--text);cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:.15s;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.small{padding:7px 11px;font-size:12px;}
+  .btn.primary{background:rgba(79,209,197,.15);border-color:rgba(79,209,197,.4);color:var(--accent);font-weight:600;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+
+  .list{display:flex;flex-direction:column;gap:10px;}
+  .row{
+    background:var(--panel);border:1px solid rgba(62,207,142,.35);border-radius:var(--radius);
+    padding:14px 16px;cursor:pointer;transition:.15s;
+  }
+  /* Light green border marks a clickable row with a drill-down (expand) behind it;
+     it goes solid/bold green once opened, so "clickable" and "currently open" read
+     as two distinct, deliberate states rather than one flat hover color. */
+  .row:hover{border-color:rgba(62,207,142,.6);}
+  .row.open{border-color:var(--green);border-width:2px;}
+  .row-top{display:flex;align-items:center;gap:12px;}
+  .rank{
+    font-size:12px;color:var(--muted);width:22px;flex:0 0 22px;text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .name-wrap{flex:1 1 auto;min-width:0;}
+  .name{font-size:15px;font-weight:600;}
+  .type{font-size:12px;color:var(--muted);margin-top:2px;}
+  .subs{
+    font-size:15px;font-weight:700;text-align:right;flex:0 0 130px;
+    font-variant-numeric:tabular-nums;
+  }
+  .subs small{display:block;font-size:11px;color:var(--muted);font-weight:400;}
+  .qos-badge{
+    flex:0 0 110px;text-align:right;font-size:13px;font-weight:600;color:var(--yellow);
+    white-space:nowrap;
+  }
+  .qos-badge.empty{color:var(--muted);font-weight:400;font-size:11px;}
+  .pill{
+    flex:0 0 auto;font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;
+    text-transform:uppercase;letter-spacing:.04em;cursor:pointer;
+    border:1px solid transparent;
+  }
+  .pill.confirmed{background:rgba(62,207,142,.15);color:var(--green);border-color:rgba(62,207,142,.35);}
+  .pill.estimated{background:rgba(232,185,63,.15);color:var(--yellow);border-color:rgba(232,185,63,.35);}
+  .pill.unconfirmed{background:rgba(92,107,128,.18);color:var(--grey);border-color:rgba(92,107,128,.4);}
+
+  .detail{
+    max-height:0;overflow:hidden;transition:max-height .3s ease;
+  }
+  .row.open .detail{max-height:1200px;margin-top:12px;}
+  .detail-inner{
+    border-top:1px solid var(--border);padding-top:12px;font-size:13px;color:#c3cddb;line-height:1.55;
+  }
+  .detail-inner .src{color:var(--muted);font-size:12px;margin-top:8px;display:block;}
+
+  .caret{
+    flex:0 0 auto;color:var(--muted);font-size:12px;transition:transform .2s;
+  }
+  .row.open .caret{transform:rotate(90deg);}
+
+  .qos-section{
+    margin-top:16px;padding-top:14px;border-top:1px dashed var(--border);
+  }
+  .qos-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .qos-title{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);}
+  .qos-avg{font-size:13px;color:var(--text);}
+  .qos-avg .muted{color:var(--muted);font-weight:400;}
+
+  .city-bars{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .city-bar-row{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .city-name{flex:0 0 100px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{flex:1 1 auto;height:6px;background:var(--panel2);border-radius:999px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;}
+  .city-meta{flex:0 0 60px;text-align:right;color:var(--muted);}
+
+  .recent-reports{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+  .report{
+    background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;
+  }
+  .report-stars{color:var(--yellow);margin-right:8px;}
+  .report-city{color:var(--accent2);font-weight:600;margin-right:8px;}
+  .report-time{color:var(--muted);}
+  .report-comment{margin-top:4px;color:#c3cddb;font-style:italic;}
+
+  .impact-badge{
+    margin-top:10px;font-size:12px;background:rgba(232,185,63,.1);border:1px solid rgba(232,185,63,.3);
+    border-radius:8px;padding:8px 10px;color:var(--yellow);
+  }
+
+  .qos-actions{margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+  .sync-note{font-size:11px;color:var(--muted);}
+
+  .rate-form{
+    display:none;flex-direction:column;gap:10px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;
+  }
+  .star-picker{font-size:22px;letter-spacing:4px;color:var(--yellow);cursor:pointer;user-select:none;}
+  .star-pick{transition:.1s;}
+  .loc-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .city-select{
+    background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    color:var(--text);font-size:12px;padding:7px 10px;flex:1 1 160px;
+  }
+  .loc-status{font-size:12px;color:var(--muted);min-height:16px;}
+  .comment-box{
+    width:100%;min-height:56px;background:var(--panel);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;resize:vertical;
+    font-family:inherit;
+  }
+  .comment-box:focus{outline:none;border-color:var(--accent2);}
+
+  .simple-toggle{
+    display:inline-flex;align-items:center;gap:10px;background:var(--panel);
+    border:2px solid var(--accent);border-radius:999px;padding:12px 20px;
+    font-size:15px;font-weight:700;color:var(--accent);margin-top:14px;
+  }
+  .simple-toggle:hover{background:var(--panel2);}
+  .simple-toggle[aria-pressed="true"]{background:var(--accent);color:#0b0f14;}
+  .simple-toggle .simple-emoji{font-size:22px;}
+  .simple-nav{
+    display:none;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:14px;margin:22px 0;
+  }
+  body.simple-mode .simple-nav{display:grid;}
+  body.simple-mode .stats{display:none;}
+  body.simple-mode .toolbar{display:none;}
+  .simple-btn{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:8px;background:var(--panel);border:2px solid var(--border);
+    border-radius:20px;padding:22px 8px;min-height:112px;color:var(--text);
+    font-size:14px;font-weight:700;text-align:center;line-height:1.25;
+  }
+  .simple-btn:hover{border-color:var(--accent2);background:var(--panel2);}
+  .simple-btn[aria-pressed="true"]{border-color:var(--accent);background:rgba(79,209,197,.15);color:var(--accent);}
+  .simple-btn .simple-icon{font-size:42px;line-height:1;}
+  body.simple-mode .active-filter-banner{font-size:15px;padding:12px 18px;}
+  body.simple-mode .row{padding:18px 16px;}
+  body.simple-mode .rank{display:none;}
+  body.simple-mode .name{font-size:19px;}
+  body.simple-mode .subs small{display:none;}
+  body.simple-mode .pill{display:none;}
+  body.simple-mode .qos-badge{font-size:16px;font-weight:700;}
+  body.simple-mode .lang-row{gap:10px;}
+  body.simple-mode .lang-chip{font-size:14px;padding:10px 16px;}
+
+  footer{margin-top:28px;color:var(--muted);font-size:12px;text-align:center;line-height:1.6;}
+  .matokipedo-footer{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding-top:20px;border-top:1px solid var(--border);
+  }
+  .matokipedo-brand{display:flex;align-items:center;gap:10px;}
+  .matokipedo-logo{height:36px;width:auto;border-radius:6px;}
+  .matokipedo-tagline{font-size:12px;color:var(--muted);}
+  .matokipedo-footer .reset-link{font-size:11px;}
+  footer .reset-link{color:var(--accent2);cursor:pointer;text-decoration:underline;}
+
+  .feedback-panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;margin-top:18px;
+  }
+  .feedback-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;}
+  .feedback-row label{font-size:12px;color:var(--muted);flex:1 1 220px;}
+  .feedback-panel .comment-box{margin-top:6px;}
+
+  /* Translation panel */
+  .translate-panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;margin-bottom:18px;
+  }
+  .panel-head{margin-bottom:12px;}
+  .lexicon-note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px;}
+  .lexicon-note a{color:var(--accent2);}
+  .translate-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .translate-form .comment-box,.translate-form .search,.translate-form button{grid-column:1 / -1;}
+  .translate-queue-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 8px;}
+  .translate-item{
+    background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;
+    margin-bottom:8px;font-size:12px;
+  }
+  .translate-item .tlang{color:var(--accent2);font-weight:600;margin-right:6px;}
+  .translate-item .tkey{color:var(--muted);}
+  .translate-item .ttext{margin-top:4px;font-size:13px;}
+  .translate-item .tsource{color:var(--muted);font-size:11px;margin-top:2px;}
+  .translate-item .tactions{margin-top:8px;display:flex;align-items:center;gap:10px;}
+  .verified-badge{color:var(--green);font-weight:600;}
+  .empty-note{font-size:12px;color:var(--muted);}
+
+  /* Impact / signups tracker */
+  .impact-section{margin-top:34px;padding-top:20px;border-top:1px solid var(--border);}
+  .impact-head h2{font-size:20px;margin:6px 0 4px;}
+  .impact-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+  .impact-form-card,.impact-list-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+  }
+  .field-label{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .reason-tags{display:flex;flex-wrap:wrap;gap:8px;}
+  .reason-tag{
+    display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--border);
+    border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer;
+  }
+  .reason-tag input{accent-color:var(--accent);}
+  .impact-story{
+    background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;
+    margin-bottom:8px;font-size:12px;
+  }
+  .impact-story .arrow{color:var(--muted);}
+  .impact-breakdown{margin-bottom:14px;}
+
+  /* Live status (color-coded: green=live, yellow=partial, light red=down, dark red=down 24h+) */
+  .status-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:10px;font-size:12px;color:var(--muted);}
+  .legend-item{display:inline-flex;align-items:center;gap:6px;}
+  .legend-note{color:var(--muted);font-size:11px;}
+  .status-section{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border);}
+  .backbone-badge{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:8px 10px;margin-bottom:10px;border:1px solid var(--border);border-left-width:3px;border-radius:6px;background:var(--panel-2, rgba(127,127,127,.06));}
+  .backbone-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;}
+  .backbone-loading{opacity:.65;font-style:italic;}
+  .referral-cta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;}
+  .referral-disclosure{font-size:11px;color:var(--muted);}
+  .status-dot{
+    display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;
+    vertical-align:middle;box-shadow:0 0 0 2px rgba(255,255,255,.04);
+  }
+  .status-dot-empty{background:var(--grey);opacity:.6;}
+  .status-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .status-row{
+    display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;
+  }
+  .status-row.status-empty{color:var(--muted);}
+  .status-city{font-weight:600;flex:0 0 auto;}
+  .status-label{color:var(--text);}
+  .status-time{color:var(--muted);margin-left:auto;}
+  .status-report-form{
+    display:none;flex-direction:column;gap:10px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;
+  }
+  .status-choices{display:flex;flex-wrap:wrap;gap:8px;}
+  .status-choice{
+    background:var(--panel);border:1px solid var(--border);border-radius:999px;
+    padding:7px 13px;font-size:12px;color:var(--muted);cursor:pointer;transition:.15s;
+  }
+  .status-choice:hover{border-color:var(--accent2);}
+  .status-choice.choice-live.active{background:rgba(62,207,142,.15);color:var(--green);border-color:rgba(62,207,142,.4);font-weight:600;}
+  .status-choice.choice-partial.active{background:rgba(232,185,63,.15);color:var(--yellow);border-color:rgba(232,185,63,.4);font-weight:600;}
+  .status-choice.choice-down.active{background:rgba(232,97,95,.15);color:var(--red);border-color:rgba(232,97,95,.4);font-weight:600;}
+
+  /* Bandwidth speed tracker (24h rolling, half-hour calibrated) */
+  .speed-section{margin-top:34px;padding-top:20px;border-top:1px solid var(--border);}
+  .speed-head h2{font-size:20px;margin:6px 0 4px;}
+  .speed-detail-section{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border);}
+  .speed-rank-list{display:flex;flex-direction:column;gap:8px;margin-top:16px;}
+  .speed-rank-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;flex-wrap:wrap;}
+  .speed-rank-num{width:22px;flex:0 0 22px;text-align:center;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;}
+  .speed-rank-name{flex:1 1 160px;min-width:0;font-weight:600;font-size:14px;display:flex;align-items:center;gap:2px;}
+  .speed-rank-bars{flex:2 1 220px;display:flex;flex-direction:column;gap:4px;min-width:140px;}
+  .speed-bar-track{height:6px;background:var(--panel2);border-radius:999px;overflow:hidden;}
+  .speed-bar-fill{height:100%;border-radius:999px;}
+  .speed-bar-label{font-size:11px;color:var(--muted);}
+  .speed-tier-badge{flex:0 0 auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 9px;border-radius:999px;}
+  .speed-no-data-list{margin-top:12px;font-size:12px;color:var(--muted);}
+  .speed-report-form{
+    display:none;flex-direction:column;gap:10px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;
+  }
+  .speed-input-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .speed-input-field{flex:1 1 120px;}
+  .speed-input-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .speed-input{
+    width:100%;background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    color:var(--text);font-size:13px;padding:8px 10px;font-family:inherit;
+  }
+  .speed-input:focus{outline:none;border-color:var(--accent2);}
+
+  @media (max-width:760px){
+    .impact-grid{grid-template-columns:1fr;}
+    .translate-form{grid-template-columns:1fr;}
+  }
+
+  @media print{
+    body{background:#fff;color:#111;padding:0;}
+    .toolbar,.stats .stat:nth-child(n){display:none;}
+    .toolbar{display:none;}
+    .privacy-note,.backend-banner,.lang-row,.translate-panel,.status-legend{display:none;}
+    .row{border:1px solid #ccc;break-inside:avoid;}
+    .pill{border:1px solid #999;}
+    .caret{display:none;}
+    .row .detail{max-height:none!important;margin-top:8px!important;}
+    .qos-actions,.rate-form,.impact-form-card,.status-report-form,.speed-report-form{display:none!important;}
+  }
+</style>
+</head>
+<body>
+<!-- Matokipedo QC v1.0.0 — old-browser compatibility banner -->
+<div id="oldBrowserBanner" style="display:none;background:#3a2a10;color:#e8b93f;border:1px solid #5c4419;border-radius:8px;padding:10px 14px;margin:0 auto 16px;max-width:980px;font-size:13px;">
+  This page uses features your browser doesn't fully support, so parts of it may not work right. Try updating your
+  browser, or use the <a href="lite.html" style="color:#e8b93f;text-decoration:underline;">Lite version</a> — it
+  works everywhere, no JavaScript required.
+</div>
+<script>
+(function(){
+  try{
+    var ok = window.fetch && window.Promise && window.localStorage &&
+      Array.prototype.includes && Object.assign && window.CSS && CSS.supports &&
+      CSS.supports("display","grid") && CSS.supports("display","flex");
+    if(!ok){ document.getElementById("oldBrowserBanner").style.display = "block"; }
+  }catch(e){
+    var b = document.getElementById("oldBrowserBanner");
+    if(b){ b.style.display = "block"; }
+  }
+})();
+</script>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">POTRAZ · Zimbabwe Telecoms</div>
+    <h1>Zimbabwe ISP Tracker</h1>
+    <div class="sub">10 licensed providers · mobile &amp; fixed/wireless internet access · last synced from POTRAZ Q4 2024–Q4 2025 sector reports</div>
+    <div><span class="privacy-note">📍 Your GPS location is only used in your browser to work out the nearest tracked city — raw coordinates are never sent anywhere. Only the city name, star rating and comment are shared.</span></div>
+    <div><span class="privacy-note">📱 On an older phone, a dot-matrix screen, or a slow connection? <a href="lite.html" style="color:inherit;">Try the no-script Lite version</a> — tiny download, works without JavaScript, includes an SMS rating option.</span></div>
+    <div><span class="backend-banner mode-local" id="backendBanner">🟡 Local demo mode — connect a free Supabase backend to make ratings shared (see README.md)</span></div>
+    <div id="iodaBadge"></div>
+    <div class="status-legend" id="statusLegend">
+      <span class="legend-item"><span class="status-dot" style="background:var(--green)"></span> <span id="legendLiveLabel">Live</span></span>
+      <span class="legend-item"><span class="status-dot" style="background:var(--yellow)"></span> <span id="legendPartialLabel">Partial</span></span>
+      <span class="legend-item"><span class="status-dot" style="background:var(--red)"></span> <span id="legendDownLabel">Down</span></span>
+      <span class="legend-item"><span class="status-dot" style="background:var(--red-dark)"></span> <span id="legendDownLongLabel">Down 24h+</span></span>
+      <span class="legend-item legend-note">🚦 per-city status reported by users, most severe shown per ISP</span>
+    </div>
+    <div class="lang-row">
+      <span class="lang-label-text" id="langLabelText">Language</span>
+      <div class="chip lang-chip active" data-lang="en">English</div>
+      <div class="chip lang-chip" data-lang="sn">ChiShona</div>
+      <div class="chip lang-chip" data-lang="nd">IsiNdebele</div>
+      <div class="chip lang-chip" data-lang="kck">TjiKalanga</div>
+      <div class="chip lang-chip" data-lang="ny">Chewa</div>
+      <div class="chip lang-chip" data-lang="bwg">Chibarwe</div>
+      <div class="chip lang-chip" data-lang="tjw">Khoisan (Tjwao)</div>
+      <div class="chip lang-chip" data-lang="nmq">Nambya</div>
+      <div class="chip lang-chip" data-lang="ndc">Ndau</div>
+      <div class="chip lang-chip" data-lang="ts">Shangani</div>
+      <div class="chip lang-chip" data-lang="st">Sotho</div>
+      <div class="chip lang-chip" data-lang="toi">Tonga</div>
+      <div class="chip lang-chip" data-lang="tn">Tswana</div>
+      <div class="chip lang-chip" data-lang="ve">Venda</div>
+      <div class="chip lang-chip" data-lang="xh">Xhosa</div>
+      <button class="btn small" id="toggleTranslatePanel" type="button">🌍 <span id="translateHelpLabel">Help translate / suggest a correction</span></button>
+    </div>
+    <div><span class="privacy-note">🖐️ Zimbabwean Sign Language is the 16th official language recognized by the Constitution — it isn't shown as a chip here because it's a visual/gestural language, not a written one, so it doesn't fit this text-translation model. A proper accommodation (video phrasebook, interpreter-linked support line) would need its own design, not a checkbox on this list.</span></div>
+  </header>
+
+  <div class="translate-panel" id="translatePanel" style="display:none;">
+    <div class="panel-head">
+      <div class="qos-title">🌍 Community translation</div>
+      <div class="lexicon-note">
+        Zimbabwe's 2013 Constitution (Section 6) recognizes 16 official languages: English, ChiShona, IsiNdebele, TjiKalanga, Chewa, Chibarwe,
+        Khoisan, Nambya, Ndau, Shangani, Sotho, Tonga, Tswana, Venda, Xhosa and Zimbabwean Sign Language. This tracker offers all 15 of those that
+        are text-based (Sign Language isn't — see the note below the language row). ChiShona, IsiNdebele, Setswana, Chewa, Shangani, Sotho,
+        Venda and Xhosa ship with a best-effort draft translation of every UI string — none reviewed by a native speaker yet, treat it as a
+        starting point. TjiKalanga and Tonga also ship a draft, but at lower confidence than the others — please prioritize reviewing those
+        two. Chibarwe, Khoisan (Tjwao), Nambya and Ndau are intentionally still blank rather than guessed: this project doesn't have
+        reliable enough source material to draft those four responsibly (Tjwao in particular has fewer than 10 living speakers and no
+        published lexicon). Suggest corrections below for any of the 15; once a suggestion gets 2 community endorsements it's
+        promoted to "verified" and goes live automatically. Oxford and Cambridge don't currently publish dictionaries for most of these
+        languages, so please cross-check suggestions against
+        <a href="https://www.alri.uz.ac.zw/" target="_blank" rel="noopener">ALRI</a> (African Languages Research Institute, University of Zimbabwe) — the
+        <em>Duramazwi Guru reChiShona</em> and <em>Isichazamazwi SesiNdebele</em> dictionaries — plus Hannan's <em>Standard Shona Dictionary</em>,
+        South Africa's PanSALB resources for Sotho/Tswana/Venda/Xhosa, and open lexical resources like
+        <a href="https://panlex.org" target="_blank" rel="noopener">PanLex</a> or Wiktionary where available. A native speaker's judgment always
+        beats any dictionary here — this project doesn't claim these sources are authoritative for every language listed.
+      </div>
+    </div>
+    <div class="translate-form">
+      <select id="suggestLang" class="city-select">
+        <option value="sn">ChiShona</option>
+        <option value="nd">IsiNdebele</option>
+        <option value="kck">TjiKalanga</option>
+        <option value="ny">Chewa</option>
+        <option value="bwg">Chibarwe</option>
+        <option value="tjw">Khoisan (Tjwao)</option>
+        <option value="nmq">Nambya</option>
+        <option value="ndc">Ndau</option>
+        <option value="ts">Shangani</option>
+        <option value="st">Sotho</option>
+        <option value="toi">Tonga</option>
+        <option value="tn">Tswana</option>
+        <option value="ve">Venda</option>
+        <option value="xh">Xhosa</option>
+      </select>
+      <select id="suggestKey" class="city-select"></select>
+      <div id="suggestCurrent" class="sync-note" style="grid-column:1 / -1;"></div>
+      <textarea id="suggestText" class="comment-box" placeholder="Your suggested translation…"></textarea>
+      <input id="suggestSource" class="search" placeholder="Optional: source/reference (e.g. Duramazwi Guru reChiShona, or 'native speaker')">
+      <button class="btn small primary" id="suggestSubmitBtn" type="button">Submit suggestion</button>
+    </div>
+    <div id="translateQueue"></div>
+  </div>
+
+  <button type="button" class="simple-toggle" id="simpleModeToggle" aria-pressed="false">
+    <span class="simple-emoji" aria-hidden="true">🧸</span>
+    <span id="simpleModeLabel">Simple Mode</span>
+  </button>
+  <div class="simple-nav" id="simpleNav" role="group" aria-label="Simple navigation"></div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <input class="search" id="search" type="text" placeholder="Search ISPs…">
+    <div class="chip active" data-filter="all"><span id="filterAllLabel">All</span></div>
+    <div class="chip" data-filter="Mobile"><span id="filterMobileLabel">Mobile</span></div>
+    <div class="chip" data-filter="Fixed/Wireless"><span id="filterFixedLabel">Fixed &amp; Wireless</span></div>
+    <div class="spacer"></div>
+    <div class="btn" id="exportPdf">🖨️ <span id="btnExportPdfLabel">Export PDF Report</span></div>
+    <div class="btn" id="exportCsv">📊 <span id="btnExportCsvLabel">Export ISP CSV</span></div>
+    <div class="btn" id="exportQos">⭐ <span id="btnExportQosLabel">Export QoS CSV</span></div>
+    <div class="btn" id="exportStatus">🚦 <span id="btnExportStatusLabel">Export Status CSV</span></div>
+    <div class="btn" id="exportSpeed">📶 <span id="btnExportSpeedLabel">Export Speed CSV</span></div>
+    <div class="btn" id="exportEpub">📚 <span id="btnExportEpubLabel">Export EPUB</span></div>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <section class="impact-section" id="impactSection">
+    <div class="impact-head">
+      <div class="eyebrow">Proof of impact</div>
+      <h2 id="impactTitleText">Switched or signed up because of what you found here?</h2>
+      <div class="sub" id="impactSubText">Tell us — this shows which ISPs are actually winning customers on reliability and support, not just price.</div>
+    </div>
+
+    <div class="stats" id="impactStats"></div>
+
+    <div class="impact-grid">
+      <div class="impact-form-card">
+        <div class="field-label" id="phoneSwitchLabel">Your phone number</div>
+        <input type="tel" class="search" id="impactPhone" placeholder="So we can help you switch — e.g. 077 123 4567" style="width:100%;margin-bottom:4px;">
+        <div class="lexicon-note" style="margin:0 0 10px;" id="phoneSwitchConsent">Only used to follow up about this switch request — never shown publicly.</div>
+        <div class="field-label" id="impactNewIspLabel">New / chosen ISP</div>
+        <select class="city-select" id="impactToIsp" style="width:100%;margin-bottom:10px;">
+          <option value="">—</option>
+        </select>
+        <div id="impactReferralCta"></div>
+        <div class="field-label" id="impactPrevIspLabel">Previous ISP (optional)</div>
+        <select class="city-select" id="impactFromIsp" style="width:100%;margin-bottom:10px;">
+          <option value="">—</option>
+        </select>
+        <div class="field-label" id="impactReasonsLabel">Why did you switch?</div>
+        <div class="reason-tags" id="impactReasonTags"></div>
+        <div class="loc-row" style="margin-top:12px;">
+          <button class="btn small" id="impactLocBtn" type="button">📍 <span id="impactLocLabel">Use my location</span></button>
+          <select class="city-select" id="impactCitySelect"><option value="">…</option></select>
+        </div>
+        <div class="loc-status" id="impactLocStatus"></div>
+        <textarea class="comment-box" id="impactComment" maxlength="500" style="margin-top:10px;" placeholder="Optional: tell us more…"></textarea>
+        <button class="btn small primary" id="impactSubmitBtn" style="margin-top:10px;" type="button"><span id="impactSubmitLabel">Submit</span></button>
+      </div>
+      <div class="impact-list-card">
+        <div id="impactBreakdown" class="impact-breakdown"></div>
+        <div id="impactRecent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="speed-section" id="speedSection">
+    <div class="speed-head">
+      <div class="eyebrow">Bandwidth</div>
+      <h2 id="speedTitleText">Bandwidth Speeds — ranked, 24h rolling average</h2>
+      <div class="sub" id="speedSubText">Calibrated from crowdsourced speed test submissions: results are grouped into 30-minute windows over the last 24 hours and averaged window-by-window, so a burst of reports in one hour can't skew the number. Green = well above the cross-ISP average, yellow = around average, red = below average.</div>
+    </div>
+    <div id="radarBenchmark"></div>
+    <div class="stats" id="speedStats"></div>
+    <div id="speedRankedList"></div>
+  </section>
+
+  <section class="feedback-panel" id="feedbackPanel">
+    <div class="panel-head">
+      <strong>Help us improve this tracker</strong>
+      <div class="lexicon-note">Quick check for testers — used to fix location matching and rough edges. Nothing personal is collected.</div>
+    </div>
+    <div class="feedback-row">
+      <label>Did the location button detect the right city?</label>
+      <select class="city-select" id="fbLocation">
+        <option value="not_tried">Didn't try it</option>
+        <option value="yes">Yes, correct</option>
+        <option value="no">No, wrong city</option>
+      </select>
+    </div>
+    <div class="feedback-row">
+      <label>Overall, how did the site feel to use?</label>
+      <select class="city-select" id="fbUsability">
+        <option value="great">Great</option>
+        <option value="ok">OK</option>
+        <option value="confusing">Confusing</option>
+      </select>
+    </div>
+    <div class="feedback-row">
+      <label>Did your language look right?</label>
+      <select class="city-select" id="fbLanguage">
+        <option value="not_checked">Didn't check</option>
+        <option value="yes">Yes</option>
+        <option value="no">No, something's off</option>
+      </select>
+    </div>
+    <textarea class="comment-box" id="fbComment" maxlength="1000" placeholder="Anything confusing, broken, or missing? (optional)"></textarea>
+    <div class="feedback-row">
+      <input class="city-select" id="fbCity" maxlength="60" placeholder="Your city (optional)">
+      <button class="btn small primary" id="fbSubmit" type="button">Send feedback</button>
+    </div>
+    <div class="loc-status" id="fbStatus"></div>
+  </section>
+
+  <footer class="matokipedo-footer">
+    <div class="matokipedo-brand">
+      <img src="matokipedo-logo.jpg" alt="Matokipedo logo" class="matokipedo-logo">
+      <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
+    </div>
+    <span class="reset-link" id="resetQos">refresh / reset local data</span>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.1.1 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+  </footer>
+</div>
+
+<!-- JSZip — free, open-source (MIT), used client-side to build the EPUB export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- Supabase JS client — free, open-source (Apache-2.0), loaded from jsDelivr CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Cloudflare Speed Test — free, open-source (BSD-3-Clause), no signup/API key; runs the
+     download/upload/latency/jitter/packet-loss measurement entirely client-side against
+     Cloudflare's public speedtest endpoints (the same infra behind speed.cloudflare.com). -->
+<script type="module">
+  import { SpeedTest } from "https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1/+esm";
+  window.__CFSpeedTest = SpeedTest;
+</script>
+<script>
+/* =========================================================================
+   SHARED BACKEND CONFIG
+   -------------------------------------------------------------------------
+   This dashboard works standalone (data saved only in your browser) OR with
+   a free Supabase backend so every visitor's ratings, switch/signup reports
+   and translation suggestions are shared.
+
+   To go live:
+     1. Create a free project at https://supabase.com (no credit card).
+     2. Open the SQL editor, paste & run the contents of schema.sql.
+     3. Project Settings → API → copy "Project URL" and "anon public" key.
+     4. Paste them below, replacing the two placeholder strings.
+     5. Commit + push — GitHub Pages redeploys automatically.
+   Full walkthrough in README.md.
+   ========================================================================= */
+const SUPABASE_CONFIG = {
+  url: "https://etdxreehedewcctkdvuo.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0ZHhyZWVoZWRld2NjdGtkdnVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzOTkwMDQsImV4cCI6MjEwMTk3NTAwNH0.8ohFQBJzglP2cjsdQW-xQ-g2DPNG0iZiNzRTLQDsVMY"
+};
+const SITE_ID = "zw"; // distinguishes this site's rows in the shared database
+
+const BACKEND_CONFIGURED = SUPABASE_CONFIG.url.indexOf("http") === 0
+  && SUPABASE_CONFIG.anonKey && SUPABASE_CONFIG.anonKey.indexOf("YOUR_") !== 0;
+
+let supa = null;
+if (BACKEND_CONFIGURED && window.supabase) {
+  supa = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+}
+
+/* =========================================================================
+   i18n — UI chrome only. ISP names, POTRAZ notes and statistics are kept in
+   English everywhere (translating regulatory/statistical text risks
+   introducing errors, and isn't something a crowdsourced review pass can
+   safely validate). ChiShona/IsiNdebele below are an unreviewed first draft.
+   TjiKalanga is intentionally empty — see the translation panel for why.
+   ========================================================================= */
+const I18N = {
+  en: {
+    lang_label: "Language",
+    translate_help: "Help translate / suggest a correction",
+    banner_local: "🟡 Local demo mode — connect a free Supabase backend to make ratings shared (see README.md)",
+    banner_connecting: "⏳ Connecting to shared backend…",
+    banner_live: "🟢 Connected — ratings are shared with every visitor (Supabase)",
+    banner_error: "🔴 Couldn't reach the shared backend — showing locally cached data only",
+    search_placeholder: "Search ISPs…",
+    filter_all: "All",
+    filter_mobile: "Mobile",
+    filter_fixed: "Fixed & Wireless",
+    btn_export_pdf: "Export PDF Report",
+    btn_export_csv: "Export ISP CSV",
+    btn_export_qos: "Export QoS CSV",
+    btn_export_epub: "Export EPUB",
+    qos_title: "Quality of Service — crowdsourced",
+    btn_rate: "Rate this ISP",
+    your_rating: "Your rating",
+    btn_use_location: "Use my location",
+    city_manual: "…or choose city manually",
+    comment_placeholder: "Optional: describe your experience (speed, reliability, outages)…",
+    btn_submit_rating: "Submit rating",
+    no_ratings_yet: "No ratings yet",
+    no_reports_yet: "No reports yet — be the first to rate this ISP.",
+    sync_shared: "shared with all visitors",
+    sync_local: "saved to this browser only",
+    impact_badge: "🎉 {n} people reported switching to or signing up with this provider after using this tracker.",
+    impact_title: "Switched or signed up because of what you found here?",
+    impact_sub: "Tell us — this shows which ISPs are actually winning customers on reliability and support, not just price.",
+    impact_new_isp: "New / chosen ISP",
+    impact_prev_isp: "Previous ISP (optional)",
+    impact_reasons: "Why did you switch?",
+    reason_reliability: "Reliability",
+    reason_support: "Customer support",
+    reason_price: "Price",
+    reason_speed: "Speed",
+    reason_coverage: "Coverage",
+    reason_other: "Other",
+    btn_submit_story: "Submit",
+    footer_note1: "Click a row to expand",
+    footer_note2: "click any status pill to cycle confirmed → estimated → unconfirmed · search and filter above",
+    reset_link: "refresh / reset local data",
+    stat_isps: "ISPs tracked",
+    stat_reports: "crowdsourced QoS reports",
+    stat_conversions: "reported switches / signups",
+    live_status_title: "Live Status — reported by users",
+    report_status: "Report current status",
+    status_live: "Live",
+    status_partial: "Partial",
+    status_down: "Down",
+    status_down_long: "Down 24h+",
+    no_status_yet: "No status reports yet — be the first to report.",
+    btn_submit_status: "Submit status",
+    btn_export_status: "Export Status CSV",
+    bandwidth_title: "Bandwidth Speeds — 24h rolling, crowdsourced",
+    report_speed: "Report a speed test",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Submit speed test",
+    btn_export_speed: "Export Speed CSV",
+    no_speed_data: "No speed tests reported in the last 24 hours",
+    no_speed_reports_yet: "No speed tests reported yet — be the first.",
+    speed_ranking_title: "Bandwidth Speeds — ranked, 24h rolling average",
+    speed_ranking_sub: "Calibrated from crowdsourced speed test submissions: results are grouped into 30-minute windows over the last 24 hours and averaged window-by-window, so a burst of reports in one hour can't skew the number. Green = well above the cross-ISP average, yellow = around average, red = below average.",
+    stat_speed_isps: "ISPs with 24h speed data",
+    stat_speed_reports: "speed test reports (24h window)",
+    speed_no_recent_any: "No speed tests reported in the last 24 hours yet.",
+    speed_no_recent: "No recent (24h) data",
+    phone_label: "Your phone number (optional)",
+    phone_placeholder: "e.g. 077 123 4567",
+    phone_consent: "Only used to follow up about this report or switch request — never shown publicly.",
+    phone_detect_hint: "📱 Looks like {isp}, based on your number — numbers can be ported, please confirm.",
+    phone_label_switch: "Your phone number",
+    phone_placeholder_switch: "So we can help you switch — e.g. 077 123 4567",
+    phone_required_note: "Please add a phone number so we can follow up about your switch.",
+    simple_mode_off: "Simple Mode",
+    simple_mode_on: "Simple Mode: ON",
+    simple_nav_reset: "Show all",
+    simple_nav_mobile: "Phone internet",
+    simple_nav_fixed: "Home internet",
+    simple_nav_best: "Best rated",
+    simple_nav_near: "Near me",
+    simple_nav_lang: "Language",
+    btn_run_speed_test: "▶ Run automatic test",
+    speed_auto_note: "Uses a small amount of data (usually under 10MB). On a limited plan? Just type your numbers below instead.",
+    speed_auto_running: "Running speed test… please don't close this tab.",
+    speed_auto_done: "Done — results filled in below. Review and submit.",
+    speed_auto_unsupported: "Automatic testing isn't supported in this browser — enter your numbers manually below.",
+    speed_auto_failed: "Couldn't complete the automatic test — enter your numbers manually below.",
+    speed_method_auto: "Automatic",
+    speed_method_manual: "Manual"
+  },
+  sn: {
+    lang_label: "Mutauro",
+    translate_help: "Batsira Kushandura / Ipa Ndudziro Iri Nani",
+    banner_local: "🟡 Modhi yepaduku — batanidza Supabase (mahara) kuti data igoverwe (ona README.md)",
+    banner_connecting: "⏳ Kubatana ne-network yakagoverwa…",
+    banner_live: "🟢 Zvabatana — data iri kugoverwa nevashandisi vose (Supabase)",
+    banner_error: "🔴 Zvatadza kubatana ne-network yakagoverwa — zviri kuratidza data yakachengetwa pane iyi bhurawuza chete",
+    search_placeholder: "Tsvaga vapi veinternet…",
+    filter_all: "Zvose",
+    filter_mobile: "Foni",
+    filter_fixed: "Yakabatana & Isina Waya",
+    btn_export_pdf: "Budisa Report yePDF",
+    btn_export_csv: "Budisa CSV yeVapi",
+    btn_export_qos: "Budisa CSV yeQoS",
+    btn_export_epub: "Budisa EPUB",
+    qos_title: "Hunhu Hwebasa — hunobva kuvanhu",
+    btn_rate: "Ipa Mavara Kune Uyu Mupi",
+    your_rating: "Mavara Ako",
+    btn_use_location: "Shandisa Nzvimbo Yangu",
+    city_manual: "…kana kuti sarudza guta zvimene",
+    comment_placeholder: "Musarudzo: tsanangura zvawakaona (kukurumidza, kuvimbika, kudzimwa kwenetiwaki)…",
+    btn_submit_rating: "Tumira Mavara",
+    no_ratings_yet: "Hapana mavara parizvino",
+    no_reports_yet: "Hapana zvinyorwa parizvino — iva wekutanga kupa mavara kune uyu mupi.",
+    sync_shared: "inogoverwa nevashandisi vose",
+    sync_local: "inochengetwa mubhurawuza rako chete",
+    impact_badge: "🎉 Vanhu {n} vakati vakachinja kana kunyoresa nemupi uyu mushure mekushandisa tracker iyi.",
+    impact_title: "Wakachinja kana kunyoresa nekuda kwezvawakaona pano?",
+    impact_sub: "Tiudzei — izvi zvinoratidza kuti ndeapi vapi vari kuwana vatengi nekuda kwekuvimbika nerutsigiro, kwete mutengo chete.",
+    impact_new_isp: "Mupi Mutsva / Wawasarudza",
+    impact_prev_isp: "Mupi Wekare (kana aripo)",
+    impact_reasons: "Sei wakachinja?",
+    reason_reliability: "Kuvimbika",
+    reason_support: "Rutsigiro Rwevatengi",
+    reason_price: "Mutengo",
+    reason_speed: "Kukurumidza",
+    reason_coverage: "Kusvika Kwenetiwaki",
+    reason_other: "Zvimwe",
+    btn_submit_story: "Tumira",
+    footer_note1: "Dzvanya mutsara kuti uwuone zvakazara",
+    footer_note2: "dzvanya chidodzo chekuti uchinje kubva ku-confirmed kuenda ku-estimated kuenda ku-unconfirmed · tsvaga uye sarudza pamusoro apa",
+    reset_link: "vandudza / dzosera data yepano",
+    stat_isps: "Vapi Vari Kutariswa",
+    stat_reports: "Zvinyorwa zveQoS zvinobva kuvanhu",
+    stat_conversions: "Vakachinja/kunyoresa vakashuma",
+    live_status_title: "Chimiro Chazvino — chinobva kuvanhu",
+    report_status: "Shuma Chimiro Chazvino",
+    status_live: "Chiri Kushanda",
+    status_partial: "Chiri Pakati",
+    status_down: "Hachishandi",
+    status_down_long: "Hachishandi Kwenguva Refu (24h+)",
+    no_status_yet: "Hapana chimiro chakashumwa parizvino — iva wekutanga kushuma.",
+    btn_submit_status: "Tumira Chimiro",
+    btn_export_status: "Budisa CSV yeChimiro",
+    bandwidth_title: "Kukurumidza kwe-Network — maawa 24 apfuura, kubva kuvanhu",
+    report_speed: "Shuma Bvunzo yeSpeed",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Tumira Bvunzo yeSpeed",
+    btn_export_speed: "Budisa CSV yeSpeed",
+    no_speed_data: "Hapana bvunzo dzespeed dzashumwa mumaawa 24 apfuura",
+    no_speed_reports_yet: "Hapana bvunzo dzespeed dzashumwa parizvino — iva wekutanga.",
+    speed_ranking_title: "Kukurumidza kwe-Network — kurongwa, maawa 24",
+    speed_ranking_sub: "Zvinobva kubvunzo dzespeed dzinoshumwa nevanhu: mhinduro dzinoiswa mumapoka emaminitsi 30 mumaawa 24 apfuura ozoiswa pamwe chete kubva pane poka nepoka, kuti bvunzo zhinji panguva imwe dzirege kukanganisa nhamba. Girini = pamusoro chaizvo peavhareji, yero = pedyo neavhareji, tsvuku = pasi peavhareji.",
+    stat_speed_isps: "Vapi vane data yespeed (24h)",
+    stat_speed_reports: "Bvunzo dzespeed (mukati memaawa 24)",
+    speed_no_recent_any: "Hapana bvunzo dzespeed dzashumwa mumaawa 24 apfuura.",
+    speed_no_recent: "Hapana data yepanguva pfupi (24h)"
+  },
+  nd: {
+    lang_label: "Ulimi",
+    translate_help: "Siza Ukuhumutsha / Phakamisa Ukulungiswa",
+    banner_local: "🟡 Imodi Yasendlalelo — xhuma i-Supabase (yamahhala) ukuze idatha yabelwane (bona README.md)",
+    banner_connecting: "⏳ Iyaxhumana lenethiwekhi eyabiwe…",
+    banner_live: "🟢 Kuxhunyiwe — idatha iyabelwana labo bonke abavakashi (Supabase)",
+    banner_error: "🔴 Kwehlulekile ukufinyelela kunethiwekhi eyabelwene — kutshengiswa idatha egcinwe kulesi siphequluli kuphela",
+    search_placeholder: "Dinga abahlinzeki be-inthanethi…",
+    filter_all: "Konke",
+    filter_mobile: "Iselula",
+    filter_fixed: "Okumisiweyo & Ngaphandle Kwentambo",
+    btn_export_pdf: "Khuphela Umbiko we-PDF",
+    btn_export_csv: "Khuphela i-CSV Yabahlinzeki",
+    btn_export_qos: "Khuphela i-CSV ye-QoS",
+    btn_export_epub: "Khuphela i-EPUB",
+    qos_title: "Izinga Lomsebenzi — livela ebantwini",
+    btn_rate: "Nika Amanqaku Lo Mhlinzeki",
+    your_rating: "Amanqaku Akho",
+    btn_use_location: "Sebenzisa Indawo Yami",
+    city_manual: "…noma khetha idolobho ngokwakho",
+    comment_placeholder: "Kungakhethwa: chaza ulwazi lwakho (ijubane, ukuthembeka, ukudinjelwa kwenethiwekhi)…",
+    btn_submit_rating: "Thumela Amanqaku",
+    no_ratings_yet: "Akukho manqaku okwamanje",
+    no_reports_yet: "Akukho mibiko okwamanje — yiba ngowokuqala ukunika lo mhlinzeki amanqaku.",
+    sync_shared: "kuyabelwana labo bonke abavakashi",
+    sync_local: "kugcinwe kulesi siphequluli kuphela",
+    impact_badge: "🎉 Abantu abangu-{n} bathi bantshintshele kulo mhlinzeki noma babhalisa emva kokusebenzisa lesi sixhobo.",
+    impact_title: "Wantshintsha kumbe wabhalisa ngenxa yalokho okubone lapha?",
+    impact_sub: "Sitshele — lokhu kutshengisa ukuthi ngobani abahlinzeki abazuza amakhasimende ngenxa yokuthembeka lokusekelwa, hatshi ngentengo kuphela.",
+    impact_new_isp: "Umhlinzeki Omutsha / Okhethiweyo",
+    impact_prev_isp: "Umhlinzeki Wangaphambili (nxa ekhona)",
+    impact_reasons: "Kungani wantshintsha?",
+    reason_reliability: "Ukuthembeka",
+    reason_support: "Ukusekelwa Kwamakhasimende",
+    reason_price: "Intengo",
+    reason_speed: "Ijubane",
+    reason_coverage: "Ukufinyelela Kwenethiwekhi",
+    reason_other: "Okunye",
+    btn_submit_story: "Thumela",
+    footer_note1: "Chofoza umugqa ukuze uwuvule",
+    footer_note2: "chofoza noma yiliphi ibhola lesimo ukuze uliqhube kusuka ku-confirmed kuya ku-estimated kuya ku-unconfirmed · dinga futhi ukhethe ngenhla",
+    reset_link: "vuselela / setha kutsha idatha yalapha",
+    stat_isps: "Abahlinzeki Abalandelelwayo",
+    stat_reports: "Imibiko ye-QoS evela ebantwini",
+    stat_conversions: "Abatshintshileyo/ababhalisileyo abavakashile",
+    live_status_title: "Isimo Samanje — sivela ebantwini",
+    report_status: "Bika Isimo Samanje",
+    status_live: "Iyasebenza",
+    status_partial: "Iyingxenye",
+    status_down: "Ayisebenzi",
+    status_down_long: "Ayisebenzi Isikhathi Eside (24h+)",
+    no_status_yet: "Akukho zimo ezibikiwe okwamanje — yiba ngowokuqala ukubika.",
+    btn_submit_status: "Thumela Isimo",
+    btn_export_status: "Khuphela i-CSV yesimo",
+    bandwidth_title: "Ijubane Lenethiwekhi — amahora angu-24 edlulileyo, sivela ebantwini",
+    report_speed: "Bika Ukuhlolwa Kwejubane",
+    download_label: "Ukudawuniloda (Mbps)",
+    upload_label: "Ukulayisha (Mbps)",
+    btn_submit_speed: "Thumela Ukuhlolwa Kwejubane",
+    btn_export_speed: "Khuphela i-CSV Yejubane",
+    no_speed_data: "Akukho kuhlolwa kwejubane okubikiwe emahoreni angu-24 edlulileyo",
+    no_speed_reports_yet: "Akukho kuhlolwa kwejubane okubikiwe okwamanje — yiba ngowokuqala.",
+    speed_ranking_title: "Ijubane Lenethiwekhi — ngokulandelana, amahora angu-24",
+    speed_ranking_sub: "Kubalwa kusuka ekuhlolweni kwejubane okuthunyelwa ngabantu: imiphumela ihlelwa ngamawindi emizuzu engu-30 phakathi kwamahora angu-24 edlulileyo bese kuthathwa isilinganiso ngalinye ngalinye, ukuze imibiko eminengi ngesikhathi esisodwa ingakwazi ukuguqula inombolo. Okuluhlaza = ngaphezulu kakhulu kwesilinganiso, okuphuzi = eduze kwesilinganiso, okubomvu = ngaphansi kwesilinganiso.",
+    stat_speed_isps: "Abahlinzeki abanedatha yejubane (24h)",
+    stat_speed_reports: "Imibiko yokuhlolwa kwejubane (esikhathini samahora angu-24)",
+    speed_no_recent_any: "Akukho kuhlolwa kwejubane okubikiwe emahoreni angu-24 edlulileyo.",
+    speed_no_recent: "Akukho datha yakamuva (24h)"
+  },
+  kck: { // best-effort draft, unreviewed — LOWER confidence than sn/nd/tn, please prioritize native-speaker review (see README)
+    lang_label: "Mulaka",
+    translate_help: "Batsira kubudulula / nyika kulungiswa",
+    banner_local: "🟡 Modhi yekumusha — bhatanidza Supabase (mahala) kuti dhata igovanwe (ona README.md)",
+    banner_connecting: "⏳ Kubhatana ne network inogovanwa…",
+    banner_live: "🟢 Yabhatana — dhata inogovanwa nevaeni vose (Supabase)",
+    banner_error: "🔴 Kwakundikana kusvika ku network inogovanwa — kuratidza dhata yakachengetwa mubhurawuza iyi bedzi",
+    search_placeholder: "Tsvaga vapi ve inthanete…",
+    filter_all: "Zvose",
+    filter_mobile: "Foni",
+    filter_fixed: "Yakabhatana & isina waya",
+    btn_export_pdf: "Bhudisa Ripoti ye PDF",
+    btn_export_csv: "Bhudisa CSV ye Vapi",
+    btn_export_qos: "Bhudisa CSV ye QoS",
+    btn_export_epub: "Bhudisa EPUB",
+    qos_title: "Hunhu hwe Basa — unobva kuvanhu",
+    btn_rate: "Nyika mupi uyu maratingi",
+    your_rating: "Maratingi ako",
+    btn_use_location: "Shandisa nzvimbo yangu",
+    city_manual: "…kana sarudza guta pachako",
+    comment_placeholder: "Hazvidikanwi: tsanangura zvawakaona (rubvilo, kuvimbika, kudzimwa kwe network)…",
+    btn_submit_rating: "Tumira Maratingi",
+    no_ratings_yet: "Hakuna maratingi zvino",
+    no_reports_yet: "Hakuna zvirevo zvino — iva wekutanga kupa mupi uyu maratingi.",
+    sync_shared: "inogovanwa nevaeni vose",
+    sync_local: "yakachengetwa mubhurawuza iyi bedzi",
+    impact_badge: "🎉 Vanhu ve {n} vakati vakachinja kana kuregista ku mupi uyu mushure mekushandisa tracker iyi.",
+    impact_title: "Wakachinja kana wakaregista nekuda kwezvawakawana pano?",
+    impact_sub: "Tiudzei — izvi zvinoratidza kuti ndevapi vapi vari kuwana vatengi nekuda kwekuvimbika ne rutsigiro, kwete mutengo bedzi.",
+    impact_new_isp: "Mupi mutswa / wawakasarudza",
+    impact_prev_isp: "Mupi wekutanga (hazvidikanwi)",
+    impact_reasons: "Sei wakachinja?",
+    reason_reliability: "Kuvimbika",
+    reason_support: "Rutsigiro rwevatengi",
+    reason_price: "Mutengo",
+    reason_speed: "Rubvilo",
+    reason_coverage: "Kusvika kwe network",
+    reason_other: "Zvimwe",
+    btn_submit_story: "Tumira",
+    footer_note1: "Bhaya mutsara kuti uuwedzere",
+    footer_note2: "bhaya chidhodha chemamiriro kuti chitenderere kubva ku confirmed kuenda ku estimated kuenda ku unconfirmed · tsvaga uye sarudza kumusoro",
+    reset_link: "vandudza / dzosera dhata yepano",
+    stat_isps: "Vapi vari kulaviridzwa",
+    stat_reports: "Zvirevo ze QoS zvinobva kuvanhu",
+    stat_conversions: "Kuchinja/kuregista kwakarehwa",
+    live_status_title: "Mamiriro Ezvino — akarehwa nevashandisi",
+    report_status: "Reva mamiriro ezvino",
+    status_live: "Iri kushanda",
+    status_partial: "Chidimbu",
+    status_down: "Hairi kushanda",
+    status_down_long: "Hairi kushanda kwenguva refu (24h+)",
+    no_status_yet: "Hakuna mamiriro akarehwa zvino — iva wekutanga kureva.",
+    btn_submit_status: "Tumira Mamiriro",
+    btn_export_status: "Bhudisa CSV ye Mamiriro",
+    bandwidth_title: "Rubvilo rwe Network — maawa 24 apfuura, anobva kuvanhu",
+    report_speed: "Reva kuedza kwerubvilo",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Tumira Kuedza Kwerubvilo",
+    btn_export_speed: "Bhudisa CSV yerubvilo",
+    no_speed_data: "Hakuna kuedza kwerubvilo kwakarehwa mumaawa 24 apfuura",
+    no_speed_reports_yet: "Hakuna kuedza kwerubvilo kwakarehwa zvino — iva wekutanga.",
+    speed_ranking_title: "Rubvilo rwe Network — rwakarongwa, maawa 24",
+    speed_ranking_sub: "Zvinobva mukuedza kwerubvilo kwakapihwa nevanhu: mhinduro dzinoiswa mumapoka emaminitsi 30 mumaawa 24 apfuura ozoenzaniswa poka nepoka, kuti zvirevo zvizhinji nguva imwe zvirege kushandura nhamba. Green = kumusoro kweavhareji yevapi vose, yellow = pedyo neavhareji, red = pasi peavhareji.",
+    stat_speed_isps: "Vapi vane dhata yerubvilo (24h)",
+    stat_speed_reports: "Zvirevo zverubvilo (mumaawa 24)",
+    speed_no_recent_any: "Hakuna kuedza kwerubvilo kwakarehwa mumaawa 24 apfuura.",
+    speed_no_recent: "Hakuna dhata yechinguva chino (24h)"
+  },
+  ny: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
+    lang_label: "Chinenero",
+    translate_help: "Thandizani kumasulira / perekani kukonzedwa",
+    banner_local: "🟡 Njira yakomweko — lumikizani ndi Supabase (yaulere) kuti deta igawidwe (onani README.md)",
+    banner_connecting: "⏳ Kulumikizana ndi netiweki yogawana…",
+    banner_live: "🟢 Yalumikizidwa — deta ikugawidwa ndi alendo onse (Supabase)",
+    banner_error: "🔴 Zalephera kufikira netiweki yogawana — kukuonetsa deta yosungidwa mu bulawuza iyi yokha",
+    search_placeholder: "Sakani opereka intaneti…",
+    filter_all: "Zonse",
+    filter_mobile: "Foni",
+    filter_fixed: "Yolumikizidwa & Yopanda Waya",
+    btn_export_pdf: "Tulutsani Lipoti ya PDF",
+    btn_export_csv: "Tulutsani CSV ya Opereka",
+    btn_export_qos: "Tulutsani CSV ya QoS",
+    btn_export_epub: "Tulutsani EPUB",
+    qos_title: "Ubwino wa Ntchito — wochokera kwa anthu",
+    btn_rate: "Perekani mfundo kwa opereka uyu",
+    your_rating: "Mfundo zanu",
+    btn_use_location: "Gwiritsani ntchito malo anga",
+    city_manual: "…kapena sankhani mzinda nokha",
+    comment_placeholder: "Osakakamiza: fotokozani zomwe mudakumana nazo (liwiro, kukhulupirika, kudula kwa netiweki)…",
+    btn_submit_rating: "Tumizani Mfundo",
+    no_ratings_yet: "Palibe mfundo pakadali pano",
+    no_reports_yet: "Palibe malipoti pakadali pano — khalani woyamba kupereka mfundo kwa opereka uyu.",
+    sync_shared: "zikugawidwa ndi alendo onse",
+    sync_local: "zasungidwa mu bulawuza iyi yokha",
+    impact_badge: "🎉 Anthu {n} anena kuti asintha kapena kulembetsa kwa opereka uyu atagwiritsa ntchito tracker iyi.",
+    impact_title: "Munasintha kapena kulembetsa chifukwa cha zomwe mudapeza pano?",
+    impact_sub: "Tiuzeni — izi zikuwonetsa opereka amene akupambana makasitomala chifukwa cha kukhulupirika ndi thandizo, osati mtengo wokha.",
+    impact_new_isp: "Opereka Watsopano / Amene Musankha",
+    impact_prev_isp: "Opereka Wakale (osakakamiza)",
+    impact_reasons: "Chifukwa chiyani munasintha?",
+    reason_reliability: "Kukhulupirika",
+    reason_support: "Thandizo la makasitomala",
+    reason_price: "Mtengo",
+    reason_speed: "Liwiro",
+    reason_coverage: "Kufikira kwa netiweki",
+    reason_other: "Zina",
+    btn_submit_story: "Tumizani",
+    footer_note1: "Dinani mzere kuti muwuone bwino",
+    footer_note2: "dinani chizindikiro cha mkhalidwe kuti muzungulire kuchoka pa confirmed kupita ku estimated kupita ku unconfirmed · sakani ndi kusankha pamwambapa",
+    reset_link: "konzaninso / bwezerani deta ya pano",
+    stat_isps: "Opereka omwe akutsatiridwa",
+    stat_reports: "Malipoti a QoS ochokera kwa anthu",
+    stat_conversions: "Kusintha/kulembetsa komwe kwaneneka",
+    live_status_title: "Mkhalidwe wa Pano — wonenedwa ndi ogwiritsa ntchito",
+    report_status: "Nenani mkhalidwe wapano",
+    status_live: "Ikugwira ntchito",
+    status_partial: "Pang'ono",
+    status_down: "Sikugwira ntchito",
+    status_down_long: "Sikugwira ntchito kwa nthawi yaitali (24h+)",
+    no_status_yet: "Palibe mkhalidwe wonenedwa pakadali pano — khalani woyamba kunena.",
+    btn_submit_status: "Tumizani Mkhalidwe",
+    btn_export_status: "Tulutsani CSV ya Mkhalidwe",
+    bandwidth_title: "Liwiro la Netiweki — maola 24 apitawa, ochokera kwa anthu",
+    report_speed: "Nenani kuyesa kwa liwiro",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Tumizani Kuyesa kwa Liwiro",
+    btn_export_speed: "Tulutsani CSV ya Liwiro",
+    no_speed_data: "Palibe kuyesa kwa liwiro kwanenedwa mu maola 24 apitawa",
+    no_speed_reports_yet: "Palibe kuyesa kwa liwiro kwanenedwa pakadali pano — khalani woyamba.",
+    speed_ranking_title: "Liwiro la Netiweki — lolamulidwa, maola 24",
+    speed_ranking_sub: "Zochokera ku kuyesa kwa liwiro komwe kwaperekedwa ndi anthu: zotsatira zimaikidwa m'magulu a mphindi 30 mu maola 24 apitawa ndikuwerengedwa gulu ndi gulu, kotero kuti malipoti ambiri panthawi imodzi asasokoneze nambala. Green = pamwamba pa avareji ya opereka onse, yellow = pafupi ndi avareji, red = pansi pa avareji.",
+    stat_speed_isps: "Opereka omwe ali ndi deta ya liwiro (24h)",
+    stat_speed_reports: "Malipoti a liwiro (mu maola 24)",
+    speed_no_recent_any: "Palibe kuyesa kwa liwiro kwanenedwa mu maola 24 apitawa.",
+    speed_no_recent: "Palibe deta yaposachedwa (24h)"
+  },
+  bwg: {}, // Chibarwe — deliberately empty; fill in via the translation panel
+  tjw: {}, // Khoisan (Tjwao) — deliberately empty; fill in via the translation panel
+  nmq: {}, // Nambya — deliberately empty; fill in via the translation panel
+  ndc: {}, // Ndau — deliberately empty; fill in via the translation panel
+  ts: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
+    lang_label: "Ririmi",
+    translate_help: "Pfuna ku hundzuluxa / nyika nhlamuselo leyi lulamisiweke",
+    banner_local: "🟡 Muxaka wa laha kaya — hlanganisa Supabase (mahala) leswaku vuxokoxoko byi avelana (vona README.md)",
+    banner_connecting: "⏳ Ya hlanganisa na network leyi avelanaka…",
+    banner_live: "🟢 Yi hlanganisiwile — vuxokoxoko byi avelana na vaendzi hinkwavo (Supabase)",
+    banner_error: "🔴 Swi tsandzekile ku fikelela network leyi avelanaka — swi kombisa vuxokoxoko lebyi hlayisiweke eka bulawuza leyi ntsena",
+    search_placeholder: "Lava vaphakeri va inthanete…",
+    filter_all: "Hinkwaswo",
+    filter_mobile: "Foni",
+    filter_fixed: "Leyi hlanganisiweke & Ku hava tinguvu",
+    btn_export_pdf: "Humesa Riphothi ra PDF",
+    btn_export_csv: "Humesa CSV ya Vaphakeri",
+    btn_export_qos: "Humesa CSV ya QoS",
+    btn_export_epub: "Humesa EPUB",
+    qos_title: "Ntiyiso wa Ntirho — lowu humaka eka vanhu",
+    btn_rate: "Nyika muphakeri loyi mavondzo",
+    your_rating: "Mavondzo ya wena",
+    btn_use_location: "Tirhisa ndhawu ya mina",
+    city_manual: "…kumbe hlawula muti hi xiyexe",
+    comment_placeholder: "A hi swa nkoka: hlamusela mintokoto ya wena (rivilo, ku tshembeka, ku hela ka network)…",
+    btn_submit_rating: "Rhumela Mavondzo",
+    no_ratings_yet: "A ku na mavondzo sweswi",
+    no_reports_yet: "A ku na swiviko sweswi — va wo sungula ku nyika muphakeri loyi mavondzo.",
+    sync_shared: "yi avelana na vaendzi hinkwavo",
+    sync_local: "yi hlayisiwile eka bulawuza leyi ntsena",
+    impact_badge: "🎉 Vanhu va {n} va vike leswaku va hundzukele eka muphakeri loyi kumbe va tsarisile endzhaku ka ku tirhisa tracker leyi.",
+    impact_title: "Xana u hundzukile kumbe u tsarisile hikwalaho ka leswi u swi kumeke laha?",
+    impact_sub: "Hi byela — leswi swi kombisa leswaku i muphakeri muni loyi a hlulaka vaxavi hikwalaho ka ku tshembeka na nseketelo, ku nga ri ntsengo ntsena.",
+    impact_new_isp: "Muphakeri lontshwa / lowu u n'wi hlawuleke",
+    impact_prev_isp: "Muphakeri wo sungula (a hi swa nkoka)",
+    impact_reasons: "Ha yini u hundzukile?",
+    reason_reliability: "Ku tshembeka",
+    reason_support: "Nseketelo wa vaxavi",
+    reason_price: "Ntsengo",
+    reason_speed: "Rivilo",
+    reason_coverage: "Ku fikelela ka network",
+    reason_other: "Swin'wana",
+    btn_submit_story: "Rhumela",
+    footer_note1: "Chukumita nkoka leswaku wu wu kula",
+    footer_note2: "chukumita xikombiso xin'wana ni xin'wana xa xiyimo leswaku xi rhendzeleka ku suka eka confirmed ku ya eka estimated ku ya eka unconfirmed · lava naswona hlawula laha henhla",
+    reset_link: "antswisa / vuyisela vuxokoxoko bya laha",
+    stat_isps: "Vaphakeri lava landzeleriwaka",
+    stat_reports: "Swiviko swa QoS leswi humaka eka vanhu",
+    stat_conversions: "Ku hundzuka/ku tsarisa leswi vikiweke",
+    live_status_title: "Xiyimo xa Sweswi — lexi vikiwaka hi vatirhisi",
+    report_status: "Vika xiyimo xa sweswi",
+    status_live: "Yi tirha",
+    status_partial: "Xiphemu",
+    status_down: "A yi tirhi",
+    status_down_long: "A yi tirhi nkarhi wo leha (24h+)",
+    no_status_yet: "A ku na swiyimo leswi vikiweke sweswi — va wo sungula ku vika.",
+    btn_submit_status: "Rhumela Xiyimo",
+    btn_export_status: "Humesa CSV ya Xiyimo",
+    bandwidth_title: "Rivilo ra Network — tiawara ta 24 leti hundzeke, leti humaka eka vanhu",
+    report_speed: "Vika ndzingo wa rivilo",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Rhumela Ndzingo wa Rivilo",
+    btn_export_speed: "Humesa CSV ya Rivilo",
+    no_speed_data: "A ku na tindzingo ta rivilo leti vikiweke eka tiawara ta 24 leti hundzeke",
+    no_speed_reports_yet: "A ku na tindzingo ta rivilo leti vikiweke sweswi — va wo sungula.",
+    speed_ranking_title: "Rivilo ra Network — leri hlawuriweke, tiawara ta 24",
+    speed_ranking_sub: "Swi huma eka tindzingo ta rivilo leti nyikeriweke hi vanhu: mbuyelo yi vekiwa eka mintlawa ya timinete ta 30 eka tiawara ta 24 leti hundzeke kutani yi hlayiwa ntlawa hi ntlawa, leswaku swiviko swo tala hi nkarhi wun'we swi nga cinci nomboro. Green = ehenhla ka average ya vaphakeri hinkwavo, yellow = ekusuhi na average, red = ehansi ka average.",
+    stat_speed_isps: "Vaphakeri lava nga na vuxokoxoko bya rivilo (24h)",
+    stat_speed_reports: "Swiviko swa rivilo (eka tiawara ta 24)",
+    speed_no_recent_any: "A ku na tindzingo ta rivilo leti vikiweke eka tiawara ta 24 leti hundzeke.",
+    speed_no_recent: "A ku na vuxokoxoko byo pfhukela (24h)"
+  },
+  st: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
+    lang_label: "Puo",
+    translate_help: "Thusa ho fetolela / fana ka tokiso",
+    banner_local: "🟡 Mokgwa wa lehae — hokela Supabase (mahala) hore data e arolelanwe (bona README.md)",
+    banner_connecting: "⏳ E hokela le network e arolelanwang…",
+    banner_live: "🟢 E hokahane — data e arolelanwa le baeti bohle (Supabase)",
+    banner_error: "🔴 Ho hlolehile ho fihlella network e arolelanwang — ho bontsha data e bolokilweng ho browser ena feela",
+    search_placeholder: "Batla babaki ba inthanete…",
+    filter_all: "Tsohle",
+    filter_mobile: "Founu",
+    filter_fixed: "E hokahantsweng & Ntle ho terata",
+    btn_export_pdf: "Ntsha Tlaleho ya PDF",
+    btn_export_csv: "Ntsha CSV ya Babaki",
+    btn_export_qos: "Ntsha CSV ya QoS",
+    btn_export_epub: "Ntsha EPUB",
+    qos_title: "Boleng ba Tshebeletso — bo tswang ho batho",
+    btn_rate: "Fana ka maemo ho mofani enwa",
+    your_rating: "Maemo a hao",
+    btn_use_location: "Sebedisa sebaka sa ka",
+    city_manual: "…kapa kgetha toropo ka bowena",
+    comment_placeholder: "Hase bohlokwa: hlalosa boiphihlelo ba hao (lebelo, botshepehi, ho kgaotseha ha network)…",
+    btn_submit_rating: "Romela Maemo",
+    no_ratings_yet: "Ha ho na maemo hajwale",
+    no_reports_yet: "Ha ho na ditlaleho hajwale — eba wa pele ho fa mofani enwa maemo.",
+    sync_shared: "e arolelanwa le baeti bohle",
+    sync_local: "e bolokilwe ho browser ena feela",
+    impact_badge: "🎉 Batho ba {n} ba tlalehile hore ba fetohetse ho mofani enwa kapa ba ingodisitse ka mora ho sebedisa tracker ena.",
+    impact_title: "O fetohile kapa wa ingodisa ka lebaka la seo o se fumaneng mona?",
+    impact_sub: "Re bolelle — sena se bontsha hore ke bafani bafe ba fumanang bareki ka lebaka la botshepehi le tshehetso, e seng theko feela.",
+    impact_new_isp: "Mofani o motjha / eo o mo kgethileng",
+    impact_prev_isp: "Mofani wa pele (hase bohlokwa)",
+    impact_reasons: "Ke hobaneng o fetohile?",
+    reason_reliability: "Botshepehi",
+    reason_support: "Tshehetso ya bareki",
+    reason_price: "Theko",
+    reason_speed: "Lebelo",
+    reason_coverage: "Ho fihlella ha network",
+    reason_other: "Tse ding",
+    btn_submit_story: "Romela",
+    footer_note1: "Tobetsa mola ho o godisa",
+    footer_note2: "tobetsa leswao la boemo hore le fetohe ho tswa ho confirmed ho ya ho estimated ho ya ho unconfirmed · batla le ho kgetha ka hodimo",
+    reset_link: "ntjhafatsa / khutlisetsa data ya mona",
+    stat_isps: "Babaki ba lekotsweng",
+    stat_reports: "Ditlaleho tsa QoS tse tswang ho batho",
+    stat_conversions: "Ho fetoha/ho ingodisa ho tlalehilweng",
+    live_status_title: "Boemo ba Hajwale — bo tlalehilweng ke basebedisi",
+    report_status: "Tlaleha boemo ba hajwale",
+    status_live: "E a sebetsa",
+    status_partial: "Karolo",
+    status_down: "Ha e sebetse",
+    status_down_long: "Ha e sebetse nako e telele (24h+)",
+    no_status_yet: "Ha ho na boemo bo tlalehilweng hajwale — eba wa pele ho tlaleha.",
+    btn_submit_status: "Romela Boemo",
+    btn_export_status: "Ntsha CSV ya Boemo",
+    bandwidth_title: "Lebelo la Network — dihora tse 24 tse fetileng, tse tswang ho batho",
+    report_speed: "Tlaleha teko ya lebelo",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Romela Teko ya Lebelo",
+    btn_export_speed: "Ntsha CSV ya Lebelo",
+    no_speed_data: "Ha ho na diteko tsa lebelo tse tlalehilweng dihoreng tse 24 tse fetileng",
+    no_speed_reports_yet: "Ha ho na diteko tsa lebelo tse tlalehilweng hajwale — eba wa pele.",
+    speed_ranking_title: "Lebelo la Network — le hlophisitsweng, dihora tse 24",
+    speed_ranking_sub: "Di tswa diteko tsa lebelo tse fanweng ke batho: diphetho di beiwa dihlopheng tsa metsotso e 30 dihoreng tse 24 tse fetileng mme tsa lekanngwa sehlopha ka sehlopha, hore ditlaleho tse ngata ka nako e le nngwe di se ke tsa fetola nomoro. Green = ka hodimo ho karolelano ya babaki bohle, yellow = haufi le karolelano, red = ka tlase ho karolelano.",
+    stat_speed_isps: "Babaki ba nang le data ya lebelo (24h)",
+    stat_speed_reports: "Ditlaleho tsa lebelo (dihoreng tse 24)",
+    speed_no_recent_any: "Ha ho na diteko tsa lebelo tse tlalehilweng dihoreng tse 24 tse fetileng.",
+    speed_no_recent: "Ha ho na data ya morao-rao (24h)"
+  },
+  toi: { // best-effort draft, unreviewed — LOWER confidence than sn/nd/tn, please prioritize native-speaker review (see README)
+    lang_label: "Mwaambo",
+    translate_help: "Amugwasye kusandulula / kupa lulamiko",
+    banner_local: "🟡 Nzila yamuno — amuvwelane a Supabase (yalubbi) kutegwa zibalo zyaabane (amubone README.md)",
+    banner_connecting: "⏳ Kuyanzana anethiwekki iyaabana…",
+    banner_live: "🟢 Yavwelanisigwa — zibalo ziyaabana abeenzu boonse (Supabase)",
+    banner_error: "🔴 Kwakachitika lubo kusika kunethiwekki iyaabana — kutondezya zibalo zibambidwe muzu bulawuza ooyu buyo",
+    search_placeholder: "Amuyandaule bapi ba intaneti…",
+    filter_all: "Zyoonse",
+    filter_mobile: "Foni",
+    filter_fixed: "Zyaanzene & Zitakwe intambo",
+    btn_export_pdf: "Amutumine Lipoti lya PDF",
+    btn_export_csv: "Amutumine CSV ya Bapi",
+    btn_export_qos: "Amutumine CSV ya QoS",
+    btn_export_epub: "Amutumine EPUB",
+    qos_title: "Bubotu bwaMulimo — buzwa kubantu",
+    btn_rate: "Amupe mupi ooyu ntenda",
+    your_rating: "Ntenda yako",
+    btn_use_location: "Amubelesye busena bwangu",
+    city_manual: "…naa musale munzi lwenu",
+    comment_placeholder: "Tacheelede: amupandulule mbomuchiona (lubilo, lusyomo, kuzimwa kwanethiwekki)…",
+    btn_submit_rating: "Amutumizye Ntenda",
+    no_ratings_yet: "Taakwe ntenda lino",
+    no_reports_yet: "Taakwe malipoti lino — amube wakusaanguna kupa mupi ooyu ntenda.",
+    sync_shared: "ziyaabana abeenzu boonse",
+    sync_local: "zibambidwe muzu bulawuza ooyu buyo",
+    impact_badge: "🎉 Bantu ba {n} bakaamba kuti bakachengukila naa kulembya kumupi ooyu nibakamana kubelesya tracker eeyi.",
+    impact_title: "Sena wakachenguka naa wakalembya nkaambo kazintu nzumwakajana aawa?",
+    impact_sub: "Amutwaambile — eezi zitondezya bapi nzibazwidilila bantu nkaambo kalusyomo aluyando, kutali mpindu luzutu.",
+    impact_new_isp: "Mupi mupya / ngomwakasala",
+    impact_prev_isp: "Mupi wakusaanguna (tacheelede)",
+    impact_reasons: "Nkaambonzi nkomwakachenguka?",
+    reason_reliability: "Lusyomo",
+    reason_support: "Lugwasyo lwabantu bawula",
+    reason_price: "Mpindu",
+    reason_speed: "Lubilo",
+    reason_coverage: "Kusika kwanethiwekki",
+    reason_other: "Zimwi",
+    btn_submit_story: "Amutumizye",
+    footer_note1: "Amuchiindile mulongo kuti muuvwule",
+    footer_note2: "amuchiindile chitondezyo chabukkale kuti chizungaane kuzwa ku confirmed kuya ku estimated kuya ku unconfirmed · amuyandaule alimwi musale kujulu",
+    reset_link: "amubambulule / amubweze zibalo zyaawa",
+    stat_isps: "Bapi mbatulangilila",
+    stat_reports: "Malipoti a QoS azwa kubantu",
+    stat_conversions: "Kuchenguka/kulembya kwakaambwa",
+    live_status_title: "Bukkale bwaLino — bwakaambwa babelesi",
+    report_status: "Amwaambe bukkale bwalino",
+    status_live: "Ulibeleka",
+    status_partial: "Chibeela",
+    status_down: "Taubeleki",
+    status_down_long: "Taubeleki kwachiindi chilamfu (24h+)",
+    no_status_yet: "Taakwe bukkale bwakaambwa lino — amube wakusaanguna kwaamba.",
+    btn_submit_status: "Amutumizye Bukkale",
+    btn_export_status: "Amutumine CSV ya Bukkale",
+    bandwidth_title: "Lubilo lwaNethiwekki — mawoola aali 24 aainda, azwa kubantu",
+    report_speed: "Amwaambe kusunka kwalubilo",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Amutumizye Kusunka Kwalubilo",
+    btn_export_speed: "Amutumine CSV yalubilo",
+    no_speed_data: "Taakwe kusunka kwalubilo kwakaambwa mumawoola aali 24 aainda",
+    no_speed_reports_yet: "Taakwe kusunka kwalubilo kwakaambwa lino — amube wakusaanguna.",
+    speed_ranking_title: "Lubilo lwaNethiwekki — lwabikkwa mumulongo, mawoola aali 24",
+    speed_ranking_sub: "Zizwa kuzisunko zyalubilo nzibapa bantu: masobelo abikkwa muzikamu zyaminiti ili 30 mumawoola aali 24 aainda alimwi apimwa chikamu achikamu, kuchitila kuti malipoti manji kuchiindi chomwe atashinsyi bbala. Green = kujulu kwamuya wabapi boonse, yellow = afwaafwi amuya, red = ansi amuya.",
+    stat_speed_isps: "Bapi balaazibalo zyalubilo (24h)",
+    stat_speed_reports: "Malipoti alubilo (mumawoola aali 24)",
+    speed_no_recent_any: "Taakwe kusunka kwalubilo kwakaambwa mumawoola aali 24 aainda.",
+    speed_no_recent: "Taakwe zibalo zyalino-lino (24h)"
+  },
+  tn: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
+    lang_label: "Puo",
+    translate_help: "Thusa go ranola / tshitsa phoso",
+    banner_local: "🟡 Tekanyo ya lefelo — golaganya Supabase (mahala) go abelana data (bona README.md)",
+    banner_connecting: "⏳ E golaganya le network e e abelanwang…",
+    banner_live: "🟢 E golaganeditswe — dipego di abelanwa le baeng botlhe (Supabase)",
+    banner_error: "🔴 Go paletswe go fitlha kwa networking e e abelanwang — go bontsha data e e bolokilweng mo browser fela",
+    search_placeholder: "Batla batlamedi ba inthanete…",
+    filter_all: "Tsotlhe",
+    filter_mobile: "Founu",
+    filter_fixed: "E golagantsweng le e sena thapo",
+    btn_export_pdf: "Ntsha Pego ya PDF",
+    btn_export_csv: "Ntsha CSV ya Batlamedi",
+    btn_export_qos: "Ntsha CSV ya QoS",
+    btn_export_epub: "Ntsha EPUB",
+    qos_title: "Boleng jwa Tirelo — bo tswa mo bathong",
+    btn_rate: "Naya Motlamedi ono maduo",
+    your_rating: "Maduo a gago",
+    btn_use_location: "Dirisa lefelo la me",
+    city_manual: "…kgotsa tlhopha toropo ka bowena",
+    comment_placeholder: "Ga se botlhokwa: tlhalosa maiteko a gago (lobelo, tshepagalo, go khutlisiwa ga network)…",
+    btn_submit_rating: "Romela Maduo",
+    no_ratings_yet: "Ga go na maduo jaanong",
+    no_reports_yet: "Ga go na dipego jaanong — nna wa ntlha go naya motlamedi ono maduo.",
+    sync_shared: "e abelanwa le baeng botlhe",
+    sync_local: "e bolokilwe mo browser eno fela",
+    impact_badge: "🎉 Batho ba {n} ba begile go fetogela kgotsa go ikwadisa mo motlamedi yo morago ga go dirisa tracker eno.",
+    impact_title: "A o fetogile kgotsa wa ikwadisa ka ntlha ya se o se boneng fano?",
+    impact_sub: "Re bolelele — se se bontsha gore ke batlamedi bafe ba ba nnyang le badirisi ka ntlha ya tshepagalo le tshegetso, e seng tlhwatlhwa fela.",
+    impact_new_isp: "Motlamedi yo mosha / o o mo tlhophileng",
+    impact_prev_isp: "Motlamedi wa pele (ga se botlhokwa)",
+    impact_reasons: "Ke eng fa o fetogile?",
+    reason_reliability: "Tshepagalo",
+    reason_support: "Tshegetso ya bareki",
+    reason_price: "Tlhwatlhwa",
+    reason_speed: "Lobelo",
+    reason_coverage: "Go fitlhelela ga network",
+    reason_other: "Tse dingwe",
+    btn_submit_story: "Romela",
+    footer_note1: "Tobetsa mola go o godisa",
+    footer_note2: "tobetsa lekgetlho lengwe le lengwe la maemo go le fetotsa go tswa go confirmed go ya go estimated go ya go unconfirmed · batla le go tlhopha kwa godimo",
+    reset_link: "ntšhafatsa / boela morago data e e mo lefelong leno",
+    stat_isps: "Batlamedi ba ba lebeletsweng",
+    stat_reports: "Dipego tsa QoS tse di tswang mo bathong",
+    stat_conversions: "Go fetoga/go ikwadisa mo go begilweng",
+    live_status_title: "Maemo a Jaanong — a a begilweng ke badirisi",
+    report_status: "Bega maemo a jaanong",
+    status_live: "E a dira",
+    status_partial: "E dira karolo",
+    status_down: "Ga e dire",
+    status_down_long: "Ga e dire dinako tse di telele (24h+)",
+    no_status_yet: "Ga go na maemo a a begilweng jaanong — nna wa ntlha go bega.",
+    btn_submit_status: "Romela Maemo",
+    btn_export_status: "Ntsha CSV ya Maemo",
+    bandwidth_title: "Lobelo lwa Network — diura tse 24 tse di fetileng, go tswa mo bathong",
+    report_speed: "Bega teko ya lobelo",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Romela Teko ya Lobelo",
+    btn_export_speed: "Ntsha CSV ya Lobelo",
+    no_speed_data: "Ga go na diteko tsa lobelo tse di begilweng mo diureng tse 24 tse di fetileng",
+    no_speed_reports_yet: "Ga go na diteko tsa lobelo tse di begilweng jaanong — nna wa ntlha.",
+    speed_ranking_title: "Lobelo lwa Network — go rulaganngwa, diura tse 24",
+    speed_ranking_sub: "Go bidiwa go tswa mo diteko tsa lobelo tse di tswang mo bathong: dipholo di beelwa mo maokong a metsotso e 30 mo diureng tse 24 tse di fetileng mme di kaakangwa okô ka okô, gore dipego tse dintsi ka nako e le nngwe di se ka tsa fetola nomoro. Green = kwa godimo ga tekanyetso ya batlamedi botlhe, yellow = gaufi le tekanyetso, red = kwa tlase ga tekanyetso.",
+    stat_speed_isps: "Batlamedi ba ba nang le data ya lobelo (24h)",
+    stat_speed_reports: "Dipego tsa lobelo (mo diureng tse 24)",
+    speed_no_recent_any: "Ga go na diteko tsa lobelo tse di begilweng mo diureng tse 24 tse di fetileng.",
+    speed_no_recent: "Ga go na data ya morago (24h)"
+  },
+  ve: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
+    lang_label: "Luambo",
+    translate_help: "Thusani u ṱalutshedza / ni ṋee vhulungami",
+    banner_local: "🟡 Nzira ya hayani — vhambedzani na Supabase (mahala) uri data i kovhelane (sedzani README.md)",
+    banner_connecting: "⏳ I khou vhambedzana na nethiwekhe ine ya kovhelanwa…",
+    banner_live: "🟢 Yo vhambedzana — data i kovhelana na vhaeni vhoṱhe (Supabase)",
+    banner_error: "🔴 Zwo kundelela u swikelela nethiwekhe ine ya kovhelanwa — zwi khou sumela data yo vhulungwaho kha burausa heyi fhedzi",
+    search_placeholder: "Ṱoḓani vhaḽisi vha inthanete…",
+    filter_all: "Zwoṱhe",
+    filter_mobile: "Founi",
+    filter_fixed: "Yo vhofhaho & Hu si na tambo",
+    btn_export_pdf: "Bveisani Muvhigo wa PDF",
+    btn_export_csv: "Bveisani CSV ya Vhaḽisi",
+    btn_export_qos: "Bveisani CSV ya QoS",
+    btn_export_epub: "Bveisani EPUB",
+    qos_title: "Vhuḓi ha Tshumelo — u bva kha vhathu",
+    btn_rate: "Ṋeani muḽisi hoyu maṱoso",
+    your_rating: "Maṱoso au",
+    btn_use_location: "Shumisani fhethu hanga",
+    city_manual: "…kana khetheni ḓoroboni nga inwe",
+    comment_placeholder: "A zwi ṱoḓei: ṱalutshedzani zwe na tangana nazwo (luvhilo, u fulufhedzea, u fhelelwa ha nethiwekhe)…",
+    btn_submit_rating: "Rumelani Maṱoso",
+    no_ratings_yet: "A hu na maṱoso zwazwino",
+    no_reports_yet: "A hu na mivhigo zwazwino — ivhani wa u thoma u ṋea muḽisi hoyu maṱoso.",
+    sync_shared: "i kovhelana na vhaeni vhoṱhe",
+    sync_local: "yo vhulungwa kha burausa heyi fhedzi",
+    impact_badge: "🎉 Vhathu vha {n} vho vhiga uri vho shanduka kana vho ṅwalisa kha muḽisi hoyu nga murahu ha u shumisa tracker heyi.",
+    impact_title: "Naa no shanduka kana na ṅwalisa nga mulandu wa zwe na zwi wana afha?",
+    impact_sub: "Ri vhudzeni — hezwi zwi sumela uri ndi vhaḽisi vhafhio vhane vha kunga vhathengi nga mulandu wa u fulufhedzea na themendelo, hu si mutengo fhedzi.",
+    impact_new_isp: "Muḽisi muswa / we na mu khetha",
+    impact_prev_isp: "Muḽisi wa u thoma (a zwi ṱoḓei)",
+    impact_reasons: "Ndi ngani no shanduka?",
+    reason_reliability: "U fulufhedzea",
+    reason_support: "Themendelo ya vhathengi",
+    reason_price: "Mutengo",
+    reason_speed: "Luvhilo",
+    reason_coverage: "U swikelela ha nethiwekhe",
+    reason_other: "Zwiṅwe",
+    btn_submit_story: "Rumelani",
+    footer_note1: "Kwatani murongo u itela u u ṱanḓavhudza",
+    footer_note2: "kwatani tshiga tshiṅwe na tshiṅwe tsha vhuimo u itela u tshi rembulusa u bva kha confirmed u ya kha estimated u ya kha unconfirmed · ṱoḓani na u khetha nṱha",
+    reset_link: "vusulusani / vhuedzedzani data ya fhano",
+    stat_isps: "Vhaḽisi vhane vha khou lavhelelwa",
+    stat_reports: "Mivhigo ya QoS i bvaho kha vhathu",
+    stat_conversions: "U shanduka/u ṅwalisa zwo vhigwaho",
+    live_status_title: "Vhuimo ha Zwazwino — ho vhigwaho nga vhashumisi",
+    report_status: "Vhigani vhuimo ha zwazwino",
+    status_live: "I khou shuma",
+    status_partial: "Tshipiḓa",
+    status_down: "A i shumi",
+    status_down_long: "A i shumi tshifhinga tshilapfu (24h+)",
+    no_status_yet: "A hu na vhuimo ho vhigwaho zwazwino — ivhani wa u thoma u vhiga.",
+    btn_submit_status: "Rumelani Vhuimo",
+    btn_export_status: "Bveisani CSV ya Vhuimo",
+    bandwidth_title: "Luvhilo lwa Nethiwekhe — awara dza 24 dzo fhiraho, dzi bvaho kha vhathu",
+    report_speed: "Vhigani mulingo wa luvhilo",
+    download_label: "Download (Mbps)",
+    upload_label: "Upload (Mbps)",
+    btn_submit_speed: "Rumelani Mulingo wa Luvhilo",
+    btn_export_speed: "Bveisani CSV ya Luvhilo",
+    no_speed_data: "A hu na milingo ya luvhilo yo vhigwaho kha awara dza 24 dzo fhiraho",
+    no_speed_reports_yet: "A hu na milingo ya luvhilo yo vhigwaho zwazwino — ivhani wa u thoma.",
+    speed_ranking_title: "Luvhilo lwa Nethiwekhe — lwo rongwaho, awara dza 24",
+    speed_ranking_sub: "Zwi bva kha milingo ya luvhilo yo ṋetshedzwaho nga vhathu: mvelelo dzi vhewa kha zwigwada zwa mimunithi ya 30 kha awara dza 24 dzo fhiraho nahone dza linganyiswa tshigwada nga tshigwada, u itela uri mivhigo minzhi nga tshifhinga tshithihi i sa shandule nomboro. Green = nṱha ha tsumbanyana ya vhaḽisi vhoṱhe, yellow = tsini na tsumbanyana, red = nga fhasi ha tsumbanyana.",
+    stat_speed_isps: "Vhaḽisi vhane vha vha na data ya luvhilo (24h)",
+    stat_speed_reports: "Mivhigo ya luvhilo (kha awara dza 24)",
+    speed_no_recent_any: "A hu na milingo ya luvhilo yo vhigwaho kha awara dza 24 dzo fhiraho.",
+    speed_no_recent: "A hu na data ya zwenezwino (24h)"
+  },
+  xh: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
+    lang_label: "Ulwimi",
+    translate_help: "Nceda uguqulele / cebisa ulungiso",
+    banner_local: "🟡 Imowudi yasekhaya — dibanisa i-Supabase (yamahhala) ukuze idatha yabelwane (jonga i-README.md)",
+    banner_connecting: "⏳ Iyaqhagamshelana nomthungelwano owabelwanayo…",
+    banner_live: "🟢 Kudibanisiwe — idatha yabelwana nabo bonke abatyeleli (Supabase)",
+    banner_error: "🔴 Kwehlulekile ukufikelela kumthungelwano owabelwanayo — kubonisa idatha egciniweyo kule browser kuphela",
+    search_placeholder: "Khangela ababoneleli be-intanethi…",
+    filter_all: "Konke",
+    filter_mobile: "Iselula",
+    filter_fixed: "Ezimiselweyo & Ezingenantambo",
+    btn_export_pdf: "Khupha Ingxelo ye-PDF",
+    btn_export_csv: "Khupha i-CSV yaBaboneleli",
+    btn_export_qos: "Khupha i-CSV ye-QoS",
+    btn_export_epub: "Khupha i-EPUB",
+    qos_title: "Umgangatho weNkonzo — ovela ebantwini",
+    btn_rate: "Nika lo mboneleli amanqaku",
+    your_rating: "Amanqaku akho",
+    btn_use_location: "Sebenzisa indawo yam",
+    city_manual: "…okanye khetha isixeko ngokwakho",
+    comment_placeholder: "Akunyanzelekanga: chaza amava akho (isantya, ukuthembeka, ukuphazamiseka komthungelwano)…",
+    btn_submit_rating: "Thumela Amanqaku",
+    no_ratings_yet: "Akukho manqaku okwangoku",
+    no_reports_yet: "Akukho ngxelo okwangoku — yiba ngowokuqala ukunika lo mboneleli amanqaku.",
+    sync_shared: "kwabelwana nabo bonke abatyeleli",
+    sync_local: "kugciniwe kule browser kuphela",
+    impact_badge: "🎉 Abantu abangu-{n} baxele ukuba batshintshele okanye babhalisela lo mboneleli emva kokusebenzisa le tracker.",
+    impact_title: "Ngaba utshintshile okanye wabhalisa ngenxa yoko ukufumene apha?",
+    impact_sub: "Sixelele — oku kubonisa ukuba ngoobani ababoneleli abaphumelela abathengi ngenxa yokuthembeka noxhaso, kungekhona ixabiso kuphela.",
+    impact_new_isp: "Umboneleli omtsha / omkhethileyo",
+    impact_prev_isp: "Umboneleli wangaphambili (akunyanzelekanga)",
+    impact_reasons: "Kutheni utshintshile?",
+    reason_reliability: "Ukuthembeka",
+    reason_support: "Inkxaso yabathengi",
+    reason_price: "Ixabiso",
+    reason_speed: "Isantya",
+    reason_coverage: "Ukufikelela komthungelwano",
+    reason_other: "Okunye",
+    btn_submit_story: "Thumela",
+    footer_note1: "Cofa umgca ukuze uwandise",
+    footer_note2: "cofa naliphi na iqhosha lemeko ukuze ujikeleze ukusuka kwi-confirmed uye kwi-estimated uye kwi-unconfirmed · khangela kwaye ukhethe ngasentla",
+    reset_link: "hlaziya / buyisela idatha yalapha",
+    stat_isps: "Ababoneleli abalandelwayo",
+    stat_reports: "Iingxelo ze-QoS ezivela ebantwini",
+    stat_conversions: "Ukutshintsha/ukubhalisa okuxeliweyo",
+    live_status_title: "Imeko yaNgoku — exeliweyo ngabasebenzisi",
+    report_status: "Xela imeko yangoku",
+    status_live: "Iyasebenza",
+    status_partial: "Icandelo",
+    status_down: "Ayisebenzi",
+    status_down_long: "Ayisebenzi ixesha elide (24h+)",
+    no_status_yet: "Akukho meko ixeliweyo okwangoku — yiba ngowokuqala ukuxela.",
+    btn_submit_status: "Thumela Imeko",
+    btn_export_status: "Khupha i-CSV yeMeko",
+    bandwidth_title: "Isantya soMthungelwano — iiyure ezingu-24 ezidlulileyo, ezivela ebantwini",
+    report_speed: "Xela uvavanyo lwesantya",
+    download_label: "Ukukhuphela (Mbps)",
+    upload_label: "Ukulayisha (Mbps)",
+    btn_submit_speed: "Thumela Uvavanyo lwesAntya",
+    btn_export_speed: "Khupha i-CSV yesAntya",
+    no_speed_data: "Akukho luvavanyo lwesantya lwexeliweyo kwiiyure ezingu-24 ezidlulileyo",
+    no_speed_reports_yet: "Akukho luvavanyo lwesantya lwexeliweyo okwangoku — yiba ngowokuqala.",
+    speed_ranking_title: "Isantya soMthungelwano — olucwangcisiweyo, iiyure ezingu-24",
+    speed_ranking_sub: "Kubalwa kwiimvavanyo zesantya ezingeniswe ngabantu: iziphumo zibekwa kumaqela emizuzu engama-30 kwiiyure ezingu-24 ezidlulileyo baze balinganiswe iqela ngeqela, ukuze iingxelo ezininzi ngexesha elinye zingakwazi ukuguqula inani. Green = ngaphezulu komlinganiselo wababoneleli bonke, yellow = kufutshane nomlinganiselo, red = ngaphantsi komlinganiselo.",
+    stat_speed_isps: "Ababoneleli abanedatha yesantya (24h)",
+    stat_speed_reports: "Iingxelo zesantya (kwiiyure ezingu-24)",
+    speed_no_recent_any: "Akukho luvavanyo lwesantya lwexeliweyo kwiiyure ezingu-24 ezidlulileyo.",
+    speed_no_recent: "Akukho datha yamva nje (24h)"
+  }
+};
+const LANG_NAMES = {
+  en:"English", sn:"ChiShona", nd:"IsiNdebele", kck:"TjiKalanga",
+  ny:"Chewa", bwg:"Chibarwe", tjw:"Khoisan (Tjwao)", nmq:"Nambya", ndc:"Ndau",
+  ts:"Shangani", st:"Sotho", toi:"Tonga", tn:"Tswana", ve:"Venda", xh:"Xhosa"
+};
+const TRANSLATABLE_KEYS = Object.keys(I18N.en);
+
+let currentLang = "en";
+try{ currentLang = localStorage.getItem("zw_isp_lang") || "en"; }catch(e){}
+let translationOverrides = {};
+
+function t(key){
+  const overrideMap = translationOverrides[currentLang];
+  if(overrideMap && overrideMap[key]) return overrideMap[key];
+  const baseMap = I18N[currentLang] || {};
+  if(baseMap[key]) return baseMap[key];
+  return I18N.en[key] || key;
+}
+function isFallback(key){
+  const overrideMap = translationOverrides[currentLang];
+  if(overrideMap && overrideMap[key]) return false;
+  const baseMap = I18N[currentLang] || {};
+  return currentLang !== "en" && !baseMap[key];
+}
+function tt(key){
+  const val = t(key);
+  return isFallback(key) ? val + ' <span class="need-translate" title="No community translation yet — showing English">🚧</span>' : val;
+}
+
+/* ---------- Reference / subscriber data ---------- */
+const DATA = [
+  {
+    name: "Econet Wireless",
+    type: "Mobile",
+    subscribers: 11332804,
+    subLabel: "active mobile subscribers",
+    status: "confirmed",
+    note: "Dominant mobile network operator. Holds ~73.75% of the mobile subscriber market and ~79% of mobile internet/data traffic as of Q4 2025. Subscriber base grew 8.5% in 2024.",
+    source: "POTRAZ Annual Sector Report 2024; Q4 2025 update"
+  },
+  {
+    name: "NetOne",
+    type: "Mobile",
+    subscribers: 4101492,
+    subLabel: "active mobile subscribers",
+    status: "confirmed",
+    note: "State-owned mobile operator. Grew from 4,062,894 to 4,101,492 subscribers in Q4 2025, driven by LTE/5G rural expansion — now covers 46.14% of rural base stations.",
+    source: "POTRAZ Q4 2025 Sector Performance Report"
+  },
+  {
+    name: "Starlink Zimbabwe",
+    type: "Fixed/Wireless",
+    subscribers: 67057,
+    subLabel: "VSAT subscribers",
+    status: "confirmed",
+    note: "Fastest-growing provider in the country. VSAT subscriptions up 31.7% quarter-on-quarter in Q4 2025 (126% average quarterly growth since Sept 2024 launch). Rapidly eating into fixed fibre traffic share.",
+    source: "POTRAZ Q4 2025 Sector Performance Report"
+  },
+  {
+    name: "Telecel Zimbabwe",
+    type: "Mobile",
+    subscribers: 381097,
+    subLabel: "active mobile subscribers",
+    status: "confirmed",
+    note: "Smallest of the three licensed mobile network operators, but grew subscribers 35.5% in 2024 — the fastest growth rate of any MNO that year.",
+    source: "POTRAZ Annual Sector Report 2024"
+  },
+  {
+    name: "Liquid (Liquid Home / ZOL)",
+    type: "Fixed/Wireless",
+    subscribers: null,
+    subLabel: "no public subscriber count",
+    status: "estimated",
+    note: "Largest fixed/fibre ISP by traffic share — held ~48.4% of fixed internet traffic in Q4 2025, down from 58.9% in Q3 as Starlink took share. POTRAZ does not publish per-company subscriber counts for fixed IAPs.",
+    source: "POTRAZ Q3/Q4 2025 traffic-share data"
+  },
+  {
+    name: "Dandemutande",
+    type: "Fixed/Wireless",
+    subscribers: null,
+    subLabel: "no public subscriber count",
+    status: "estimated",
+    note: "Second-largest fixed ISP by traffic share, gaining fast — up 4.47 percentage points to 17.71% of fixed internet traffic in Q4 2025.",
+    source: "POTRAZ Q4 2025 traffic-share data"
+  },
+  {
+    name: "TelOne",
+    type: "Fixed/Wireless",
+    subscribers: 298047,
+    subLabel: "national fixed telephone lines (proxy)",
+    status: "estimated",
+    note: "State-owned fixed-line and DSL/fibre operator. National fixed telephone lines totalled 298,047 as of Q4 2024 (declining ~3.75% y/y as VoIP substitutes). Broadband subscriber count isn't disclosed separately.",
+    source: "POTRAZ Annual Sector Report 2024"
+  },
+  {
+    name: "Africom",
+    type: "Fixed/Wireless",
+    subscribers: null,
+    subLabel: "no public subscriber count",
+    status: "unconfirmed",
+    note: "Licensed Internet Access Provider offering fibre and corporate connectivity. No individual subscriber or traffic-share figures published by POTRAZ.",
+    source: "POTRAZ IAP licence list, 2024"
+  },
+  {
+    name: "PowerTel",
+    type: "Fixed/Wireless",
+    subscribers: null,
+    subLabel: "no public subscriber count",
+    status: "unconfirmed",
+    note: "Zesa-owned IAP, primarily provides backhaul capacity and some retail fixed/wireless connectivity. No individual subscriber figures published.",
+    source: "POTRAZ IAP licence list, 2024"
+  },
+  {
+    name: "Telecontract / Utande / ZARNet",
+    type: "Fixed/Wireless",
+    subscribers: null,
+    subLabel: "no public subscriber count",
+    status: "unconfirmed",
+    note: "Smaller licensed IAPs serving regional, corporate and institutional customers. Grouped here as niche players with no individually disclosed subscriber data.",
+    source: "POTRAZ IAP licence list, 2024"
+  }
+];
+
+const STATUS_CYCLE = ["confirmed","estimated","unconfirmed"];
+const STATUS_LABEL = {confirmed:"Confirmed",estimated:"Estimated",unconfirmed:"Unconfirmed"};
+
+/* ---------- Live status (crowdsourced, color-coded) ----------
+   green = live, yellow = partial connection, light red = down,
+   dark red = down for 24h+ straight (computed from an unbroken
+   streak of "down" reports for that ISP+city, not stored directly). */
+const STATUS_META = {
+  live:        { color:"var(--green)",     label:"Live",       emoji:"🟢" },
+  partial:     { color:"var(--yellow)",    label:"Partial",    emoji:"🟡" },
+  down:        { color:"var(--red)",       label:"Down",       emoji:"🔴" },
+  "down-long": { color:"var(--red-dark)",  label:"Down 24h+",  emoji:"🟥" }
+};
+const STATUS_SEVERITY = { live:0, partial:1, down:2, "down-long":3 };
+
+/* ---------- Live backbone visibility (real, dynamic, no-auth feed) ----------
+   For ISPs that operate their own registered network (an ASN), we ask
+   RIPEstat (stat.ripe.net — RIPE NCC's free, public, no-signup data API)
+   whether that network is currently visible in the global internet routing
+   table, as seen live from dozens of real vantage points worldwide. This is
+   genuinely live data fetched directly from the browser — not crowdsourced,
+   not cached, not mocked. It answers one narrow, honest question: "has this
+   ISP's backbone been withdrawn from the global internet?" (the kind of
+   signal you'd see during a cable cut or a shutdown) — it is NOT "is my home
+   connection working right now"; that's what the crowdsourced Live Status
+   section is for. Only ISPs with a verified ASN are included (found via
+   RIPEstat's own searchcomplete/country-asns data calls — see README); the
+   rest simply don't show this card, rather than guessing. */
+const ISP_ASN = {
+  "TelOne": "37204",
+  "NetOne": "328088",
+  "Telecel Zimbabwe": "327770",
+  "PowerTel": "37184",
+  "Liquid (Liquid Home / ZOL)": "30844"
+};
+const BACKBONE = {}; // isp -> {level, ratio, seen, total, ts} | null(failed) | undefined(loading)
+const BACKBONE_META = {
+  routed:    { color:"var(--green)",  label:"Globally routed" },
+  degraded:  { color:"var(--yellow)", label:"Partially visible" },
+  withdrawn: { color:"var(--red)",    label:"Withdrawn from routing table" }
+};
+function backboneLevel(ratio){
+  if(ratio >= 0.85) return "routed";
+  if(ratio >= 0.4) return "degraded";
+  return "withdrawn";
+}
+async function fetchBackboneVisibility(isp, asn){
+  try{
+    const res = await fetch(`https://stat.ripe.net/data/visibility/data.json?resource=AS${asn}`, { cache:"no-store" });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json = await res.json();
+    const vis = (json && json.data && json.data.visibilities) || [];
+    if(vis.length===0){ BACKBONE[isp] = null; return; }
+    let seen=0, total=0;
+    vis.forEach(v=>{
+      const full = (v.ipv4_full_table_peer_count||0) + (v.ipv6_full_table_peer_count||0);
+      const notSeeing = (v.ipv4_full_table_peers_not_seeing||[]).length + (v.ipv6_full_table_peers_not_seeing||[]).length;
+      total += full;
+      seen += Math.max(0, full - notSeeing);
+    });
+    const ratio = total>0 ? seen/total : 0;
+    BACKBONE[isp] = { level: backboneLevel(ratio), ratio, seen, total, ts: Date.now() };
+  }catch(e){
+    console.warn("RIPEstat backbone visibility check failed for "+isp, e);
+    BACKBONE[isp] = null;
+  }
+}
+async function refreshBackboneVisibility(){
+  if(typeof fetch !== "function") return;
+  await Promise.all(Object.entries(ISP_ASN).map(([isp,asn])=>fetchBackboneVisibility(isp, asn)));
+  renderAll();
+}
+function backboneHtml(isp){
+  const asn = ISP_ASN[isp];
+  if(!asn) return "";
+  const b = BACKBONE[isp];
+  if(b === undefined) return `<div class="backbone-badge backbone-loading">🌐 Checking live backbone visibility via RIPEstat…</div>`;
+  if(b === null) return "";
+  const meta = BACKBONE_META[b.level];
+  const pct = Math.round(b.ratio*100);
+  return `<div class="backbone-badge" style="border-color:${meta.color}">
+    <span class="backbone-dot" style="background:${meta.color}"></span>
+    🌐 Backbone (AS${asn}, live via RIPEstat): <strong>${meta.label}</strong> — seen by ${pct}% of monitored internet routers worldwide
+  </div>`;
+}
+
+/* ---------- Live national connectivity signal (real, dynamic, no-auth feed) ----------
+   IODA (Internet Outage Detection and Analysis — api.ioda.inetintel.cc.gatech.edu) is a
+   free, public, no-signup API run by Georgia Tech/CAIDA that tracks how many BGP-routed
+   /24 network blocks are currently visible for a country, sampled every 5 minutes from
+   real internet routing data. It's the same public API IODA's own dashboard uses from
+   the browser. This asks, honestly: "right now, how many of Zimbabwe's normally-visible
+   network blocks are actually reachable on the global internet?" — a genuine national-level,
+   real-time signal, independent of RIPEstat's per-ISP check above and not gated behind any
+   backend setup. If the count drops sharply relative to its own recent baseline, that's a
+   real sign of a country-wide connectivity event (e.g. a cable cut or a shutdown), not a
+   crowdsourced guess. */
+const IODA_ENTITY_CODE = "ZW";
+const IODA_ENTITY_NAME = "Zimbabwe";
+let IODA_SIGNAL; // undefined = not yet checked, null = unavailable, object = live data
+async function refreshIodaSignal(){
+  if(typeof fetch !== "function"){ IODA_SIGNAL = null; renderIodaBadge(); return; }
+  try{
+    const untilTs = Math.floor(Date.now()/1000);
+    const fromTs = untilTs - 3*60*60; // last 3 hours, 5-min native step
+    const url = `https://api.ioda.inetintel.cc.gatech.edu/v2/signals/raw/country/${IODA_ENTITY_CODE}?datasource=bgp&from=${fromTs}&until=${untilTs}`;
+    const res = await fetch(url, { cache:"no-store" });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json = await res.json();
+    const series = (json && json.data && json.data[0] && json.data[0][0] && json.data[0][0].values) || [];
+    const clean = series.filter(v => typeof v === "number" && v > 0);
+    if(clean.length < 2){ IODA_SIGNAL = null; renderIodaBadge(); return; }
+    const latest = clean[clean.length-1];
+    const baseline = clean.slice(0, -1).reduce((a,b)=>a+b,0) / (clean.length-1);
+    const ratio = baseline > 0 ? latest/baseline : 1;
+    let level;
+    if(ratio >= 0.9) level = "normal";
+    else if(ratio >= 0.5) level = "reduced";
+    else level = "severe";
+    IODA_SIGNAL = { latest, baseline, ratio, level, ts: Date.now() };
+  }catch(e){
+    console.warn("IODA national connectivity signal unavailable", e);
+    IODA_SIGNAL = null;
+  }
+  renderIodaBadge();
+}
+const IODA_META = {
+  normal:  { color:"var(--green)",  label:"Normal — no sign of a national outage" },
+  reduced: { color:"var(--yellow)", label:"Reduced — fewer network blocks visible than usual" },
+  severe:  { color:"var(--red)",    label:"Severe — sharp drop in visible network blocks" }
+};
+function iodaBadgeHtml(){
+  if(IODA_SIGNAL === undefined) return `<div class="backbone-badge backbone-loading">🌍 Checking live national connectivity via IODA (Georgia Tech/CAIDA)…</div>`;
+  if(IODA_SIGNAL === null) return "";
+  const meta = IODA_META[IODA_SIGNAL.level];
+  const pct = Math.round(IODA_SIGNAL.ratio*100);
+  return `<div class="backbone-badge" style="border-color:${meta.color}">
+    <span class="backbone-dot" style="background:${meta.color}"></span>
+    🌍 ${IODA_ENTITY_NAME} national connectivity (live, IODA/CAIDA, public no-auth feed): <strong>${meta.label}</strong> — ${Math.round(IODA_SIGNAL.latest)} routed /24 blocks visible now (${pct}% of the last-3h baseline)
+  </div>`;
+}
+function renderIodaBadge(){
+  const el = document.getElementById("iodaBadge");
+  if(el) el.innerHTML = iodaBadgeHtml();
+}
+
+/* ---------- Crowdsourced quality-of-service data ---------- */
+const CITIES = [
+  {name:"Harare", lat:-17.8292, lon:31.0522},
+  {name:"Bulawayo", lat:-20.1500, lon:28.5833},
+  {name:"Chitungwiza", lat:-17.9939, lon:31.0575},
+  {name:"Mutare", lat:-18.9707, lon:32.6709},
+  {name:"Gweru", lat:-19.4500, lon:29.8167},
+  {name:"Kwekwe", lat:-18.9281, lon:29.8149},
+  {name:"Kadoma", lat:-18.3333, lon:29.9167},
+  {name:"Masvingo", lat:-20.0637, lon:30.8277},
+  {name:"Chinhoyi", lat:-17.3667, lon:30.2000},
+  {name:"Norton", lat:-17.8833, lon:30.7000},
+  {name:"Marondera", lat:-18.1853, lon:31.5514},
+  {name:"Ruwa", lat:-17.8908, lon:31.2436},
+  {name:"Chegutu", lat:-18.1333, lon:30.1500},
+  {name:"Zvishavane", lat:-20.3333, lon:30.0333},
+  {name:"Bindura", lat:-17.3019, lon:31.3306},
+  {name:"Beitbridge", lat:-22.2167, lon:30.0000},
+  {name:"Redcliff", lat:-19.0333, lon:29.7833},
+  {name:"Victoria Falls", lat:-17.9243, lon:25.8567},
+  {name:"Hwange", lat:-18.3648, lon:26.5017},
+  {name:"Rusape", lat:-18.5333, lon:32.1167}
+];
+
+const DAY = 24*60*60*1000;
+const nowTs = Date.now();
+const SEED_REPORTS = [
+  {isp:"Econet Wireless", stars:4, city:"Harare", comment:"Solid LTE speeds in Avondale, occasional evening slowdown.", ts: nowTs-2*DAY},
+  {isp:"Econet Wireless", stars:3, city:"Bulawayo", comment:"Data is fine but calls drop near the CBD.", ts: nowTs-9*DAY},
+  {isp:"Econet Wireless", stars:5, city:"Mutare", comment:"Best coverage of the three MNOs out here.", ts: nowTs-14*DAY},
+  {isp:"NetOne", stars:4, city:"Chinhoyi", comment:"Great rural coverage, video calls stutter sometimes.", ts: nowTs-4*DAY},
+  {isp:"NetOne", stars:2, city:"Masvingo", comment:"Frequent downtime after storms.", ts: nowTs-20*DAY},
+  {isp:"Telecel Zimbabwe", stars:3, city:"Mutare", comment:"Cheap data but patchy 4G.", ts: nowTs-11*DAY},
+  {isp:"Starlink Zimbabwe", stars:5, city:"Harare", comment:"Rock solid, way better than fibre during load shedding.", ts: nowTs-1*DAY},
+  {isp:"Starlink Zimbabwe", stars:5, city:"Gweru", comment:"Finally reliable internet outside the city.", ts: nowTs-6*DAY},
+  {isp:"Starlink Zimbabwe", stars:4, city:"Beitbridge", comment:"Great speed, dish alignment took some trial and error.", ts: nowTs-16*DAY},
+  {isp:"Liquid (Liquid Home / ZOL)", stars:4, city:"Harare", comment:"Fibre is fast when it's up, outages take a while to fix.", ts: nowTs-3*DAY},
+  {isp:"Liquid (Liquid Home / ZOL)", stars:3, city:"Bulawayo", comment:"Good speeds, support response is slow.", ts: nowTs-13*DAY},
+  {isp:"Dandemutande", stars:4, city:"Harare", comment:"Reliable for the price, decent customer service.", ts: nowTs-8*DAY},
+  {isp:"TelOne", stars:2, city:"Harare", comment:"ADSL still painfully slow in my area.", ts: nowTs-5*DAY},
+  {isp:"TelOne", stars:3, city:"Kwekwe", comment:"OK for basic browsing, not for streaming.", ts: nowTs-19*DAY},
+  {isp:"Africom", stars:4, city:"Harare", comment:"Great for our office, dedicated line barely drops.", ts: nowTs-22*DAY},
+  {isp:"PowerTel", stars:3, city:"Chegutu", comment:"Decent backhaul, limited retail support.", ts: nowTs-25*DAY}
+];
+
+/* ---------- Crowdsourced switch/signup ("proof of impact") data ---------- */
+const REASON_KEYS = ["reliability","support","price","speed","coverage","other"];
+const SEED_CONVERSIONS = [
+  {to_isp:"Starlink Zimbabwe", from_isp:"Liquid (Liquid Home / ZOL)", reasons:["reliability","speed"], city:"Harare", comment:"Switched after seeing how many outage complaints ZOL had here compared with Starlink's ratings.", ts: nowTs-3*DAY},
+  {to_isp:"Econet Wireless", from_isp:"Telecel Zimbabwe", reasons:["coverage","support"], city:"Mutare", comment:"The QoS ratings here matched what I was hearing locally, so I switched.", ts: nowTs-7*DAY},
+  {to_isp:"Dandemutande", from_isp:"TelOne", reasons:["reliability","support"], city:"Harare", comment:"Tired of ADSL outages — the reports here matched my own experience.", ts: nowTs-10*DAY},
+  {to_isp:"NetOne", from_isp:null, reasons:["price","coverage"], city:"Chinhoyi", comment:"First-time subscriber, picked NetOne after checking rural coverage ratings here.", ts: nowTs-15*DAY},
+  {to_isp:"Starlink Zimbabwe", from_isp:"TelOne", reasons:["reliability"], city:"Gweru", comment:"No more load-shedding downtime.", ts: nowTs-18*DAY}
+];
+
+/* ---------- Crowdsourced live-status ("is it up right now?") data ----------
+   Seeded with a mix of live/partial/down per ISP+city, including two
+   unbroken "down" streaks (NetOne/Masvingo, TelOne/Kwekwe) that cross the
+   24h mark so the dark-red "down 24h+" state has something to show. */
+const HOUR = 60*60*1000;
+const SEED_STATUS = [
+  {isp:"Econet Wireless", city:"Harare", status:"live", comment:"", ts: nowTs-1*HOUR},
+  {isp:"Econet Wireless", city:"Bulawayo", status:"partial", comment:"Slow during peak hours.", ts: nowTs-3*HOUR},
+  {isp:"Econet Wireless", city:"Mutare", status:"live", comment:"", ts: nowTs-5*HOUR},
+  {isp:"NetOne", city:"Masvingo", status:"down", comment:"Still down.", ts: nowTs-2*HOUR},
+  {isp:"NetOne", city:"Masvingo", status:"down", comment:"No change overnight.", ts: nowTs-10*HOUR},
+  {isp:"NetOne", city:"Masvingo", status:"down", comment:"Outage started after the storm.", ts: nowTs-30*HOUR},
+  {isp:"NetOne", city:"Chinhoyi", status:"live", comment:"", ts: nowTs-2*HOUR},
+  {isp:"Telecel Zimbabwe", city:"Mutare", status:"partial", comment:"Data works, calls drop.", ts: nowTs-4*HOUR},
+  {isp:"Starlink Zimbabwe", city:"Harare", status:"live", comment:"", ts: nowTs-20*60*1000},
+  {isp:"Starlink Zimbabwe", city:"Gweru", status:"live", comment:"", ts: nowTs-1*HOUR},
+  {isp:"Liquid (Liquid Home / ZOL)", city:"Bulawayo", status:"partial", comment:"Reduced speed since morning.", ts: nowTs-1*HOUR},
+  {isp:"Liquid (Liquid Home / ZOL)", city:"Harare", status:"down", comment:"Fibre cut reported nearby.", ts: nowTs-5*HOUR},
+  {isp:"Dandemutande", city:"Harare", status:"live", comment:"", ts: nowTs-3*HOUR},
+  {isp:"TelOne", city:"Harare", status:"down", comment:"ADSL down since this afternoon.", ts: nowTs-3*HOUR},
+  {isp:"TelOne", city:"Kwekwe", status:"down", comment:"Still no line.", ts: nowTs-1*HOUR},
+  {isp:"TelOne", city:"Kwekwe", status:"down", comment:"Line went down yesterday.", ts: nowTs-28*HOUR},
+  {isp:"Africom", city:"Harare", status:"live", comment:"", ts: nowTs-6*HOUR},
+  {isp:"PowerTel", city:"Chegutu", status:"partial", comment:"", ts: nowTs-2*HOUR}
+];
+
+/* ---------- Bandwidth speed tracker ----------
+   Crowdsourced upload/download speed-test submissions. The ranked section
+   and each ISP's own summary are "24h calibrated": only reports from the
+   last 24 hours count, and — to stop a burst of reports in one hour from
+   skewing the number — they're first averaged inside 30-minute windows,
+   then those window-averages are averaged together. Color is relative to
+   the average across all reporting ISPs: green = well above average,
+   yellow = around average, red = below average (see speedTier()). */
+const SPEED_TIER_META = {
+  high: { color:"var(--green)",  label:"High" },
+  avg:  { color:"var(--yellow)", label:"Average" },
+  low:  { color:"var(--red)",    label:"Below average" }
+};
+const SPEED_BAND = 0.15; // +/-15% around the cross-ISP average download speed
+const SEED_SPEED = [
+  {isp:"Econet Wireless", city:"Harare", download_mbps:22.5, upload_mbps:7.8, comment:"", ts: nowTs-20*60*1000},
+  {isp:"Econet Wireless", city:"Bulawayo", download_mbps:18.3, upload_mbps:6.1, comment:"", ts: nowTs-3*HOUR},
+  {isp:"Econet Wireless", city:"Mutare", download_mbps:24.0, upload_mbps:8.5, comment:"Great during off-peak.", ts: nowTs-12*HOUR},
+  {isp:"Econet Wireless", city:"Harare", download_mbps:19.0, upload_mbps:6.5, comment:"Older test, outside the 24h window on purpose.", ts: nowTs-26*HOUR},
+  {isp:"NetOne", city:"Chinhoyi", download_mbps:11.2, upload_mbps:4.0, comment:"", ts: nowTs-2*HOUR},
+  {isp:"NetOne", city:"Masvingo", download_mbps:7.5, upload_mbps:2.8, comment:"Slower than usual.", ts: nowTs-9*HOUR},
+  {isp:"Telecel Zimbabwe", city:"Mutare", download_mbps:8.9, upload_mbps:3.1, comment:"", ts: nowTs-5*HOUR},
+  {isp:"Starlink Zimbabwe", city:"Harare", download_mbps:112.4, upload_mbps:18.2, comment:"", ts: nowTs-40*60*1000},
+  {isp:"Starlink Zimbabwe", city:"Gweru", download_mbps:96.7, upload_mbps:15.5, comment:"", ts: nowTs-4*HOUR},
+  {isp:"Starlink Zimbabwe", city:"Beitbridge", download_mbps:88.2, upload_mbps:14.0, comment:"", ts: nowTs-15*HOUR},
+  {isp:"Liquid (Liquid Home / ZOL)", city:"Harare", download_mbps:42.6, upload_mbps:19.3, comment:"", ts: nowTs-1*HOUR},
+  {isp:"Liquid (Liquid Home / ZOL)", city:"Bulawayo", download_mbps:35.1, upload_mbps:16.8, comment:"", ts: nowTs-8*HOUR},
+  {isp:"Dandemutande", city:"Harare", download_mbps:31.4, upload_mbps:12.7, comment:"", ts: nowTs-6*HOUR},
+  {isp:"TelOne", city:"Harare", download_mbps:3.2, upload_mbps:0.6, comment:"ADSL, barely usable for video.", ts: nowTs-2*HOUR},
+  {isp:"TelOne", city:"Kwekwe", download_mbps:2.8, upload_mbps:0.5, comment:"", ts: nowTs-18*HOUR},
+  {isp:"Africom", city:"Harare", download_mbps:27.9, upload_mbps:11.2, comment:"", ts: nowTs-10*HOUR},
+  {isp:"PowerTel", city:"Chegutu", download_mbps:14.6, upload_mbps:5.9, comment:"", ts: nowTs-7*HOUR}
+];
+
+/* ---------- Phone number → ISP suggestion (best-effort, never authoritative) ----------
+   Matches a phone number's original numbering-block prefix to the mobile carrier it was
+   issued to (Econet 077/078, NetOne 071, Telecel 073 — POTRAZ's published numbering
+   plan). This is a static prefix table, NOT a live registry lookup: numbers can be
+   ported to a different network, and fixed-line/fibre ISPs (TelOne, ZOL, Dandemutande,
+   Africom, PowerTel, Starlink, Telecontract/Utande/ZARNet) have no phone-number
+   relationship at all. So this is always shown as an editable suggestion the visitor
+   must confirm — it never silently fills or blocks a form. Phone numbers themselves are
+   never stored on a publicly-readable table (see upsertCustomer below and schema.sql) —
+   they only ever go into the write-only `customers` table. */
+const PHONE_ISP_PREFIXES = { "077":"Econet Wireless", "078":"Econet Wireless", "071":"NetOne", "073":"Telecel Zimbabwe" };
+function normalizePhone(raw){
+  let d = (raw||"").replace(/[^\d+]/g,"");
+  if(d.indexOf("+263")===0) d = "0"+d.slice(4);
+  else if(d.indexOf("263")===0 && d.length>9) d = "0"+d.slice(3);
+  return d;
+}
+function isValidPhone(raw){
+  const d = normalizePhone(raw);
+  return /^0\d{8,9}$/.test(d);
+}
+function detectIspFromPhone(raw){
+  const d = normalizePhone(raw);
+  return PHONE_ISP_PREFIXES[d.slice(0,3)] || null;
+}
+async function upsertCustomer(phone, detectedIsp){
+  if(!phone || !isValidPhone(phone) || !supa) return;
+  try{
+    const { error } = await supa.from("customers").upsert(
+      { phone_number: normalizePhone(phone), country: "263", detected_isp: detectedIsp || null, last_seen: new Date().toISOString() },
+      { onConflict: "phone_number" }
+    );
+    if(error) throw error;
+  }catch(e){
+    console.warn("Could not sync contact number — the report/switch request itself was still saved", e);
+  }
+}
+
+const STORAGE_KEY = "zw_isp_qos_reports_v1";
+const CONV_KEY = "zw_isp_conversions_v1";
+const TRANSLATION_KEY = "zw_isp_translations_v1";
+const STATUS_KEY = "zw_isp_status_reports_v1";
+const SPEED_KEY = "zw_isp_speed_reports_v1";
+
+function loadLocalReports(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ const parsed = JSON.parse(raw); if(Array.isArray(parsed)) return parsed; }
+  }catch(e){ /* localStorage unavailable, e.g. file:// in some browsers */ }
+  return SEED_REPORTS.slice();
+}
+function saveLocalReports(reports){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(reports)); }catch(e){ /* ignore */ }
+}
+function loadLocalConversions(){
+  try{
+    const raw = localStorage.getItem(CONV_KEY);
+    if(raw){ const parsed = JSON.parse(raw); if(Array.isArray(parsed)) return parsed; }
+  }catch(e){}
+  return SEED_CONVERSIONS.slice();
+}
+function saveLocalConversions(list){
+  try{ localStorage.setItem(CONV_KEY, JSON.stringify(list)); }catch(e){}
+}
+function loadLocalTranslations(){
+  try{
+    const raw = localStorage.getItem(TRANSLATION_KEY);
+    if(raw){ const parsed = JSON.parse(raw); if(Array.isArray(parsed)) return parsed; }
+  }catch(e){}
+  return [];
+}
+function saveLocalTranslations(list){
+  try{ localStorage.setItem(TRANSLATION_KEY, JSON.stringify(list)); }catch(e){}
+}
+function loadLocalStatus(){
+  try{
+    const raw = localStorage.getItem(STATUS_KEY);
+    if(raw){ const parsed = JSON.parse(raw); if(Array.isArray(parsed)) return parsed; }
+  }catch(e){}
+  return SEED_STATUS.slice();
+}
+function saveLocalStatus(list){
+  try{ localStorage.setItem(STATUS_KEY, JSON.stringify(list)); }catch(e){}
+}
+function loadLocalSpeed(){
+  try{
+    const raw = localStorage.getItem(SPEED_KEY);
+    if(raw){ const parsed = JSON.parse(raw); if(Array.isArray(parsed)) return parsed; }
+  }catch(e){}
+  return SEED_SPEED.slice();
+}
+function saveLocalSpeed(list){
+  try{ localStorage.setItem(SPEED_KEY, JSON.stringify(list)); }catch(e){}
+}
+
+let REPORTS = loadLocalReports();
+let CONVERSIONS = loadLocalConversions();
+let TRANSLATIONS = loadLocalTranslations();
+let STATUS_REPORTS = loadLocalStatus();
+let SPEED_REPORTS = loadLocalSpeed();
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function nearestCity(lat,lon){
+  let best=null, bestD=Infinity;
+  CITIES.forEach(c=>{
+    const d = haversine(lat,lon,c.lat,c.lon);
+    if(d<bestD){ bestD=d; best=c; }
+  });
+  return { city: best.name, distanceKm: Math.round(bestD) };
+}
+function reportsFor(isp){ return REPORTS.filter(r=>r.isp===isp); }
+function aggregate(isp){
+  const rs = reportsFor(isp);
+  if(rs.length===0) return {avg:null, count:0, byCity:[]};
+  const avg = rs.reduce((a,r)=>a+r.stars,0)/rs.length;
+  const cityMap = {};
+  rs.forEach(r=>{
+    if(!cityMap[r.city]) cityMap[r.city] = {count:0,sum:0};
+    cityMap[r.city].count++;
+    cityMap[r.city].sum += r.stars;
+  });
+  const byCity = Object.entries(cityMap)
+    .map(([city,v])=>({city, count:v.count, avg:v.sum/v.count}))
+    .sort((a,b)=>b.count-a.count);
+  return {avg, count:rs.length, byCity};
+}
+function starString(avg){
+  const full = Math.round(avg);
+  return "★".repeat(full) + "☆".repeat(5-full);
+}
+function relTime(ts){
+  const s = Math.floor((Date.now() - ts)/1000);
+  if(s < 60) return "just now";
+  const m = Math.floor(s/60); if(m < 60) return m+"m ago";
+  const h = Math.floor(m/60); if(h < 24) return h+"h ago";
+  const d = Math.floor(h/24); if(d < 30) return d+"d ago";
+  const mo = Math.floor(d/30); return mo+"mo ago";
+}
+function recentReportsHtml(isp){
+  const rs = reportsFor(isp).slice().sort((a,b)=>b.ts-a.ts).slice(0,4);
+  if(rs.length===0) return `<div class="empty-note" style="margin-bottom:12px;">${tt("no_reports_yet")}</div>`;
+  return `<div class="recent-reports">${rs.map(r=>`
+      <div class="report">
+        <span class="report-stars">${"★".repeat(r.stars)}${"☆".repeat(5-r.stars)}</span>
+        <span class="report-city">${r.city}</span>
+        <span class="report-time">${relTime(r.ts)}</span>
+        ${r.comment ? `<div class="report-comment">“${r.comment}”</div>` : ""}
+      </div>`).join("")}</div>`;
+}
+function conversionsAggregate(){
+  const byIsp = {}; const byReason = {};
+  CONVERSIONS.forEach(c=>{
+    byIsp[c.to_isp] = (byIsp[c.to_isp]||0)+1;
+    (c.reasons||[]).forEach(r=>{ byReason[r] = (byReason[r]||0)+1; });
+  });
+  return { total: CONVERSIONS.length, byIsp, byReason };
+}
+
+function citiesReportedFor(isp){
+  return Array.from(new Set(STATUS_REPORTS.filter(r=>r.isp===isp).map(r=>r.city)));
+}
+function statusFor(isp, city){
+  const rs = STATUS_REPORTS.filter(r=>r.isp===isp && r.city===city).sort((a,b)=>b.ts-a.ts);
+  if(rs.length===0) return null;
+  const latest = rs[0];
+  if(latest.status !== "down"){
+    return { level: latest.status, ts: latest.ts, downSinceTs:null, downForMs:0 };
+  }
+  // Walk back through an unbroken streak of "down" reports to find how
+  // long this city+ISP has been continuously down — that decides
+  // light red (<24h) vs dark red (>=24h), not any single report's age.
+  let streakStart = latest.ts;
+  for(let i=0;i<rs.length;i++){
+    if(rs[i].status === "down"){ streakStart = rs[i].ts; }
+    else break;
+  }
+  const downForMs = Date.now() - streakStart;
+  const level = downForMs >= DAY ? "down-long" : "down";
+  return { level, ts: latest.ts, downSinceTs: streakStart, downForMs };
+}
+function overallStatus(isp){
+  const cities = citiesReportedFor(isp);
+  let worst = null;
+  cities.forEach(city=>{
+    const s = statusFor(isp, city);
+    if(!s) return;
+    if(!worst || STATUS_SEVERITY[s.level] > STATUS_SEVERITY[worst.level]) worst = s;
+  });
+  return worst;
+}
+function formatDuration(ms){
+  const totalHours = Math.floor(ms/HOUR);
+  if(totalHours < 1) return Math.max(1,Math.floor(ms/60000))+"m";
+  if(totalHours < 24) return totalHours+"h";
+  const d = Math.floor(totalHours/24);
+  const h = totalHours % 24;
+  return h ? d+"d "+h+"h" : d+"d";
+}
+function liveStatusHtml(isp){
+  const cities = citiesReportedFor(isp);
+  if(cities.length===0){
+    return `<div class="status-row status-empty"><span class="status-dot status-dot-empty"></span><span class="status-label">${t("no_status_yet")}</span></div>`;
+  }
+  const entries = cities.map(city=>({city, s: statusFor(isp, city)})).filter(e=>e.s);
+  entries.sort((a,b)=> STATUS_SEVERITY[b.s.level]-STATUS_SEVERITY[a.s.level]);
+  const rowsHtml = entries.map(({city,s})=>{
+    const meta = STATUS_META[s.level];
+    let timeText = relTime(s.ts);
+    if(s.level==="down" || s.level==="down-long"){
+      timeText = "down "+formatDuration(s.downForMs)+" · last report "+relTime(s.ts);
+    }
+    return `<div class="status-row">
+      <span class="status-dot" style="background:${meta.color}"></span>
+      <span class="status-city">${city}</span>
+      <span class="status-label">${meta.emoji} ${meta.label}</span>
+      <span class="status-time">${timeText}</span>
+    </div>`;
+  }).join("");
+  return `<div class="status-list">${rowsHtml}</div>`;
+}
+function recentStatusReportsHtml(isp){
+  const rs = STATUS_REPORTS.filter(r=>r.isp===isp).slice().sort((a,b)=>b.ts-a.ts).slice(0,4);
+  if(rs.length===0) return "";
+  return `<div class="recent-reports">${rs.map(r=>{
+    const meta = STATUS_META[r.status] || STATUS_META.live;
+    return `<div class="report">
+      <span class="status-dot" style="background:${meta.color}"></span>
+      <span class="report-city">${r.city}</span>
+      <span class="report-time">${meta.label} · ${relTime(r.ts)}</span>
+      ${r.comment ? `<div class="report-comment">“${r.comment}”</div>` : ""}
+    </div>`;
+  }).join("")}</div>`;
+}
+
+function speedReportsInWindow(isp, windowMs){
+  const cutoff = Date.now() - (windowMs || DAY);
+  return SPEED_REPORTS.filter(r=>r.isp===isp && r.ts >= cutoff);
+}
+function calibratedSpeed(isp){
+  const rs = speedReportsInWindow(isp, DAY);
+  if(rs.length===0) return null;
+  const HALF_HOUR = 30*60*1000;
+  const now = Date.now();
+  const buckets = {};
+  rs.forEach(r=>{
+    const idx = Math.floor((now - r.ts)/HALF_HOUR);
+    if(!buckets[idx]) buckets[idx] = { downSum:0, upSum:0, count:0 };
+    buckets[idx].downSum += r.download_mbps;
+    buckets[idx].upSum += r.upload_mbps;
+    buckets[idx].count++;
+  });
+  const bucketList = Object.values(buckets);
+  const downloadMbps = bucketList.reduce((a,b)=>a+(b.downSum/b.count),0)/bucketList.length;
+  const uploadMbps = bucketList.reduce((a,b)=>a+(b.upSum/b.count),0)/bucketList.length;
+  return { downloadMbps, uploadMbps, buckets: bucketList.length, reportCount: rs.length };
+}
+function speedAggregateAll(){
+  const entries = DATA.map(d=>({isp:d.name, calib: calibratedSpeed(d.name)})).filter(e=>e.calib);
+  const overallAvgDown = entries.length ? entries.reduce((a,e)=>a+e.calib.downloadMbps,0)/entries.length : 0;
+  const overallAvgUp = entries.length ? entries.reduce((a,e)=>a+e.calib.uploadMbps,0)/entries.length : 0;
+  entries.sort((a,b)=>b.calib.downloadMbps - a.calib.downloadMbps);
+  return { entries, overallAvgDown, overallAvgUp };
+}
+function speedTier(downloadMbps, overallAvgDown){
+  if(!overallAvgDown || overallAvgDown<=0) return "avg";
+  if(downloadMbps >= overallAvgDown*(1+SPEED_BAND)) return "high";
+  if(downloadMbps < overallAvgDown*(1-SPEED_BAND)) return "low";
+  return "avg";
+}
+/* ---------- National bandwidth benchmark (live, via Cloudflare Radar) ----------
+   Cloudflare Radar publishes real, live internet-quality measurements
+   aggregated by country from Cloudflare's own network traffic. It requires
+   an API token to call, so it can't be fetched safely from a static page —
+   the token would be exposed to anyone who opens dev tools. Instead this
+   calls a small Supabase Edge Function (functions/radar-bandwidth in this
+   repo) that holds the token server-side and proxies just the Zimbabwe
+   summary back to the browser. If you haven't deployed that function (see
+   README "Live feeds" section), this simply stays hidden — the crowdsourced
+   ranking above keeps working exactly as before. This benchmark is
+   national-level only (Cloudflare Radar doesn't break bandwidth down per
+   named Zimbabwean ISP), so it's shown as one reference line, not folded
+   into any one ISP's ranking. */
+let RADAR_BENCHMARK; // undefined = not yet checked, null = unavailable, object = live data
+async function refreshRadarBenchmark(){
+  if(!BACKEND_CONFIGURED || typeof fetch !== "function"){ RADAR_BENCHMARK = null; renderSpeedSection(); return; }
+  try{
+    const res = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/radar-bandwidth`, {
+      headers: { apikey: SUPABASE_CONFIG.anonKey, Authorization: "Bearer "+SUPABASE_CONFIG.anonKey }
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json = await res.json();
+    RADAR_BENCHMARK = (json && json.configured && !json.error) ? json : null;
+  }catch(e){
+    console.warn("Cloudflare Radar national benchmark unavailable", e);
+    RADAR_BENCHMARK = null;
+  }
+  renderSpeedSection();
+}
+function radarBenchmarkHtml(){
+  if(!RADAR_BENCHMARK) return "";
+  const r = RADAR_BENCHMARK;
+  return `<div class="backbone-badge" style="border-color:var(--blue,#3b82f6)">
+    <span class="backbone-dot" style="background:var(--blue,#3b82f6)"></span>
+    🌍 Zimbabwe national reference (live, Cloudflare Radar${r.sampleDate ? ", "+r.sampleDate : ""}): <strong>${Number(r.downloadMbps).toFixed(1)} Mbps ↓ · ${Number(r.uploadMbps).toFixed(1)} Mbps ↑</strong> (p50, all networks) — a country-wide benchmark to compare the crowdsourced per-ISP figures below against.
+  </div>`;
+}
+function recentSpeedReportsHtml(isp){
+  const rs = SPEED_REPORTS.filter(r=>r.isp===isp).slice().sort((a,b)=>b.ts-a.ts).slice(0,4);
+  if(rs.length===0) return `<div class="empty-note" style="margin-bottom:12px;">${t("no_speed_reports_yet")}</div>`;
+  return `<div class="recent-reports">${rs.map(r=>`
+      <div class="report">
+        <span class="report-city">${r.city}</span>
+        <span class="report-stars" style="color:var(--accent2);">${r.download_mbps.toFixed(1)}↓ / ${r.upload_mbps.toFixed(1)}↑ Mbps</span>
+        <span class="report-time">${relTime(r.ts)}</span>
+        ${r.comment ? `<div class="report-comment">“${r.comment}”</div>` : ""}
+      </div>`).join("")}</div>`;
+}
+
+/* ---------- Backend sync (Supabase) ---------- */
+function setBanner(mode, text){
+  const el = document.getElementById("backendBanner");
+  el.className = "backend-banner mode-"+mode;
+  el.textContent = text;
+}
+function rebuildOverrides(){
+  translationOverrides = {};
+  TRANSLATIONS.filter(x=>x.status==="approved").forEach(x=>{
+    if(!translationOverrides[x.lang]) translationOverrides[x.lang] = {};
+    translationOverrides[x.lang][x.string_key] = x.suggested_text;
+  });
+}
+
+async function initBackend(){
+  if(!supa){
+    setBanner("local", t("banner_local"));
+    rebuildOverrides();
+    renderAll();
+    return;
+  }
+  setBanner("connecting", t("banner_connecting"));
+  try{
+    const [qosRes, convRes, trRes, statusRes, speedRes, refRes] = await Promise.all([
+      supa.from("qos_reports").select("isp,stars,city,comment,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(1000),
+      supa.from("conversions").select("to_isp,from_isp,reasons,city,comment,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(500),
+      supa.from("translations").select("id,lang,string_key,suggested_text,source_note,endorsements,status,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(500),
+      supa.from("status_reports").select("isp,city,status,comment,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(1000),
+      supa.from("speed_reports").select("isp,city,download_mbps,upload_mbps,comment,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(1000),
+      supa.from("referral_clicks").select("isp,context,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(2000)
+    ]);
+    if(qosRes.error) throw qosRes.error;
+    if(convRes.error) throw convRes.error;
+    if(trRes.error) throw trRes.error;
+    if(statusRes.error) throw statusRes.error;
+    if(speedRes.error) throw speedRes.error;
+    if(refRes.error) throw refRes.error;
+
+    if(qosRes.data && qosRes.data.length){
+      REPORTS = qosRes.data.map(r=>({isp:r.isp, stars:r.stars, city:r.city||"Unknown", comment:r.comment||"", ts:new Date(r.created_at).getTime()}));
+    }
+    if(convRes.data){
+      CONVERSIONS = convRes.data.map(c=>({to_isp:c.to_isp, from_isp:c.from_isp, reasons:c.reasons||[], city:c.city||"Unknown", comment:c.comment||"", ts:new Date(c.created_at).getTime()}));
+    }
+    if(trRes.data){
+      TRANSLATIONS = trRes.data.map(x=>({id:x.id, lang:x.lang, string_key:x.string_key, suggested_text:x.suggested_text, source_note:x.source_note, endorsements:x.endorsements, status:x.status, ts:new Date(x.created_at).getTime()}));
+    }
+    if(statusRes.data && statusRes.data.length){
+      STATUS_REPORTS = statusRes.data.map(r=>({isp:r.isp, city:r.city||"Unknown", status:r.status, comment:r.comment||"", ts:new Date(r.created_at).getTime()}));
+    }
+    if(speedRes.data && speedRes.data.length){
+      SPEED_REPORTS = speedRes.data.map(r=>({isp:r.isp, city:r.city||"Unknown", download_mbps:r.download_mbps, upload_mbps:r.upload_mbps, comment:r.comment||"", ts:new Date(r.created_at).getTime()}));
+    }
+    if(refRes.data){
+      REFERRAL_CLICKS = refRes.data.map(r=>({isp:r.isp, context:r.context||"detail", ts:new Date(r.created_at).getTime()}));
+    }
+    rebuildOverrides();
+    setBanner("live", t("banner_live"));
+    renderAll();
+  }catch(e){
+    console.warn("Supabase sync failed", e);
+    rebuildOverrides();
+    setBanner("error", t("banner_error"));
+    renderAll();
+  }
+}
+
+async function submitReport(report){
+  REPORTS.push(report);
+  saveLocalReports(REPORTS);
+  openRows.add(report.isp);
+  renderAll();
+  if(supa){
+    try{
+      const { error } = await supa.from("qos_reports").insert([{
+        site: SITE_ID,
+        isp: report.isp, stars: report.stars, city: report.city, comment: report.comment
+      }]);
+      if(error) throw error;
+    }catch(e){
+      console.warn("Could not sync rating to shared backend — kept locally only", e);
+      setBanner("error", "🔴 Rating saved locally, but couldn't reach the shared backend to sync it");
+    }
+  }
+}
+
+async function submitFeedback(){
+  const btn = document.getElementById("fbSubmit");
+  const status = document.getElementById("fbStatus");
+  if(!supa){
+    status.textContent = "Feedback needs the shared backend to be configured — nothing to send yet.";
+    return;
+  }
+  const payload = {
+    site: SITE_ID,
+    location_correct: document.getElementById("fbLocation").value,
+    usability: document.getElementById("fbUsability").value,
+    language_ok: document.getElementById("fbLanguage").value,
+    comment: (document.getElementById("fbComment").value || "").trim().slice(0,1000),
+    city: (document.getElementById("fbCity").value || "").trim().slice(0,60)
+  };
+  btn.disabled = true;
+  status.textContent = "Sending…";
+  try{
+    const { error } = await supa.from("tester_feedback").insert([payload]);
+    if(error) throw error;
+    status.textContent = "✅ Thanks — feedback sent.";
+    document.getElementById("fbComment").value = "";
+    document.getElementById("fbCity").value = "";
+  }catch(e){
+    console.warn("Could not send feedback", e);
+    status.textContent = "🔴 Couldn't send feedback — check your connection and try again.";
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+async function submitStatus(entry){
+  STATUS_REPORTS.push(entry);
+  saveLocalStatus(STATUS_REPORTS);
+  openRows.add(entry.isp);
+  renderAll();
+  if(supa){
+    try{
+      const { error } = await supa.from("status_reports").insert([{
+        site: SITE_ID,
+        isp: entry.isp, city: entry.city, status: entry.status, comment: entry.comment
+      }]);
+      if(error) throw error;
+    }catch(e){
+      console.warn("Could not sync status report to shared backend — kept locally only", e);
+      setBanner("error", "🔴 Status report saved locally, but couldn't reach the shared backend to sync it");
+    }
+  }
+}
+
+async function submitSpeed(entry){
+  SPEED_REPORTS.push(entry);
+  saveLocalSpeed(SPEED_REPORTS);
+  openRows.add(entry.isp);
+  renderAll();
+  if(supa){
+    const baseRow = {
+      site: SITE_ID,
+      isp: entry.isp, city: entry.city, download_mbps: entry.download_mbps, upload_mbps: entry.upload_mbps, comment: entry.comment
+    };
+    // Richer columns from the built-in automatic speed test (v1.1.0+). If the
+    // speed_reports table hasn't been migrated to add these columns yet, the first
+    // insert below fails and we retry with just baseRow — so this keeps working
+    // before AND after the migration in matokipedo-isp-tracker-qc's SKILL.md is run.
+    const richRow = {
+      ...baseRow,
+      test_method: entry.test_method || "manual",
+      latency_idle_ms: entry.latency_idle_ms ?? null,
+      latency_download_ms: entry.latency_download_ms ?? null,
+      latency_upload_ms: entry.latency_upload_ms ?? null,
+      jitter_download_ms: entry.jitter_download_ms ?? null,
+      jitter_upload_ms: entry.jitter_upload_ms ?? null,
+      packet_loss_pct: entry.packet_loss_pct ?? null,
+      connection_type: entry.connection_type ?? null,
+      device_type: entry.device_type ?? null
+    };
+    try{
+      const { error } = await supa.from("speed_reports").insert([richRow]);
+      if(error) throw error;
+    }catch(e){
+      try{
+        const { error: error2 } = await supa.from("speed_reports").insert([baseRow]);
+        if(error2) throw error2;
+        console.warn("Synced with base columns only — run the speed_reports migration in matokipedo-isp-tracker-qc's SKILL.md to store the richer auto-test metrics too.", e);
+      }catch(e2){
+        console.warn("Could not sync speed test to shared backend — kept locally only", e2);
+        setBanner("error", "🔴 Speed test saved locally, but couldn't reach the shared backend to sync it");
+      }
+    }
+  }
+}
+
+async function submitConversion(entry){
+  CONVERSIONS.push(entry);
+  saveLocalConversions(CONVERSIONS);
+  renderAll();
+  if(supa){
+    try{
+      const { error } = await supa.from("conversions").insert([{
+        site: SITE_ID,
+        to_isp: entry.to_isp, from_isp: entry.from_isp, reasons: entry.reasons, city: entry.city, comment: entry.comment
+      }]);
+      if(error) throw error;
+    }catch(e){
+      console.warn("Could not sync signup/switch report to shared backend — kept locally only", e);
+    }
+  }
+}
+
+async function submitTranslation(sugg){
+  sugg.id = sugg.id || ("local-"+Date.now()+"-"+Math.random().toString(36).slice(2));
+  sugg.endorsements = 0; sugg.status = "pending"; sugg.ts = Date.now();
+  TRANSLATIONS.push(sugg);
+  saveLocalTranslations(TRANSLATIONS);
+  renderTranslatePanel();
+  if(supa){
+    try{
+      const { data, error } = await supa.from("translations").insert([{
+        site: SITE_ID,
+        lang: sugg.lang, string_key: sugg.string_key, suggested_text: sugg.suggested_text, source_note: sugg.source_note
+      }]).select();
+      if(error) throw error;
+      if(data && data[0]){ sugg.id = data[0].id; saveLocalTranslations(TRANSLATIONS); }
+    }catch(e){ console.warn("Translation suggestion sync failed", e); }
+  }
+}
+
+async function endorseTranslation(id){
+  const item = TRANSLATIONS.find(x=>String(x.id)===String(id));
+  if(!item) return;
+  item.endorsements = (item.endorsements||0)+1;
+  if(item.endorsements>=2) item.status = "approved";
+  saveLocalTranslations(TRANSLATIONS);
+  rebuildOverrides();
+  renderTranslatePanel();
+  renderAll();
+  if(supa && typeof item.id === "number"){
+    try{
+      const { error } = await supa.rpc("endorse_translation", { translation_id: item.id });
+      if(error) throw error;
+    }catch(e){ console.warn("Endorsement sync failed", e); }
+  }
+}
+
+/* ---------- Rendering ---------- */
+let state = { filter: "all", query: "" };
+let openRows = new Set();
+
+function fmt(n){
+  if(n===null || n===undefined) return "—";
+  return n.toLocaleString("en-US");
+}
+
+function applyStaticTranslations(){
+  document.getElementById("langLabelText").textContent = t("lang_label");
+  document.getElementById("translateHelpLabel").textContent = t("translate_help");
+  document.getElementById("search").placeholder = t("search_placeholder");
+  document.getElementById("filterAllLabel").textContent = t("filter_all");
+  document.getElementById("filterMobileLabel").textContent = t("filter_mobile");
+  document.getElementById("filterFixedLabel").textContent = t("filter_fixed");
+  document.getElementById("btnExportPdfLabel").textContent = t("btn_export_pdf");
+  document.getElementById("btnExportCsvLabel").textContent = t("btn_export_csv");
+  document.getElementById("btnExportQosLabel").textContent = t("btn_export_qos");
+  document.getElementById("btnExportEpubLabel").textContent = t("btn_export_epub");
+  document.getElementById("btnExportStatusLabel").textContent = t("btn_export_status");
+  document.getElementById("legendLiveLabel").textContent = t("status_live");
+  document.getElementById("legendPartialLabel").textContent = t("status_partial");
+  document.getElementById("legendDownLabel").textContent = t("status_down");
+  document.getElementById("legendDownLongLabel").textContent = t("status_down_long");
+  document.getElementById("btnExportSpeedLabel").textContent = t("btn_export_speed");
+  document.getElementById("speedTitleText").textContent = t("speed_ranking_title");
+  document.getElementById("speedSubText").textContent = t("speed_ranking_sub");
+  document.getElementById("impactTitleText").textContent = t("impact_title");
+  document.getElementById("impactSubText").textContent = t("impact_sub");
+  document.getElementById("impactNewIspLabel").textContent = t("impact_new_isp");
+  document.getElementById("impactPrevIspLabel").textContent = t("impact_prev_isp");
+  document.getElementById("phoneSwitchLabel").textContent = t("phone_label_switch");
+  document.getElementById("phoneSwitchConsent").textContent = t("phone_consent");
+  document.getElementById("impactPhone").placeholder = t("phone_placeholder_switch");
+  document.getElementById("impactReasonsLabel").textContent = t("impact_reasons");
+  document.getElementById("impactLocLabel").textContent = t("btn_use_location");
+  document.getElementById("impactComment").placeholder = t("comment_placeholder");
+  document.getElementById("impactSubmitLabel").textContent = t("btn_submit_story");
+  document.getElementById("resetQos").textContent = t("reset_link");
+
+  document.getElementById("impactReasonTags").innerHTML = REASON_KEYS.map(k=>
+    `<label class="reason-tag"><input type="checkbox" value="${k}" data-role="reasonCheck"> <span>${t("reason_"+k)}</span></label>`
+  ).join("");
+
+  const impactCitySelect = document.getElementById("impactCitySelect");
+  impactCitySelect.innerHTML = `<option value="">${t("city_manual")}</option>` + CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("");
+
+  document.getElementById("simpleModeLabel").textContent = document.body.classList.contains("simple-mode") ? t("simple_mode_on") : t("simple_mode_off");
+
+  const simpleNav = document.getElementById("simpleNav");
+  const simpleItems = [
+    { filter:"all", icon:"📶", label:t("simple_nav_reset") },
+    { filter:"Mobile", icon:"📱", label:t("simple_nav_mobile") },
+    { filter:"Fixed/Wireless", icon:"🏠", label:t("simple_nav_fixed") }
+  ];
+  simpleNav.innerHTML = simpleItems.map(it=>`<button type="button" class="simple-btn" data-simple-filter="${it.filter}" aria-pressed="${state.filter===it.filter}"><span class="simple-icon" aria-hidden="true">${it.icon}</span><span>${it.label}</span></button>`).join("");
+  simpleNav.querySelectorAll("[data-simple-filter]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.filter = btn.getAttribute("data-simple-filter");
+      document.querySelectorAll(".chip[data-filter]").forEach(c=>{
+        const active = c.getAttribute("data-filter")===state.filter;
+        c.classList.toggle("active", active);
+      });
+      renderAll();
+    });
+  });
+
+  document.querySelectorAll(".lang-chip").forEach(chip=>{
+    chip.classList.toggle("active", chip.getAttribute("data-lang")===currentLang);
+  });
+}
+
+function renderStats(){
+  const confirmed = DATA.filter(d=>d.subscribers!==null).reduce((a,d)=>a+d.subscribers,0);
+  const withData = DATA.filter(d=>d.subscribers!==null).length;
+  const mobile = DATA.filter(d=>d.type==="Mobile").length;
+  const fixed = DATA.filter(d=>d.type==="Fixed/Wireless").length;
+  const totalReports = REPORTS.length;
+  const overallAvg = totalReports ? (REPORTS.reduce((a,r)=>a+r.stars,0)/totalReports).toFixed(1) : "—";
+  const stats = [
+    {num: DATA.length, lbl: t("stat_isps")},
+    {num: fmt(confirmed), lbl:"combined confirmed subscribers"},
+    {num: withData+" / "+DATA.length, lbl:"providers with public subscriber counts"},
+    {num: mobile+" mobile · "+fixed+" fixed/wireless", lbl:"provider mix"},
+    {num: totalReports, lbl: t("stat_reports")},
+    {num: overallAvg+"★", lbl:"avg QoS across all reports"}
+  ];
+  document.getElementById("stats").innerHTML = stats.map(s=>
+    `<div class="stat"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`
+  ).join("");
+}
+
+/* ---------- Referral / affiliate links (monetization) ----------
+   Off by default: fill in a real referral URL + tracking code per ISP here
+   once you've actually struck an agreement with them. Until an ISP is added
+   to this map, no "Sign up" button appears for it — the site never implies
+   a paid relationship that doesn't exist. Clicks are logged locally and
+   (if configured) to Supabase's referral_clicks table regardless of whether
+   a monetary deal is in place yet, so you have real click-through numbers
+   to show a prospective ISP partner during the sales conversation itself. */
+const ISP_REFERRAL = {
+  // "Econet Wireless": { url: "https://www.econet.co.zw/", code: "ZWISPTRACKER" },
+};
+const REFERRAL_KEY = "zw_isp_referral_clicks_v1";
+function loadLocalReferrals(){
+  try{ const raw = localStorage.getItem(REFERRAL_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+function saveLocalReferrals(list){
+  try{ localStorage.setItem(REFERRAL_KEY, JSON.stringify(list)); }catch(e){}
+}
+let REFERRAL_CLICKS = loadLocalReferrals();
+function referralUrlFor(isp, context){
+  const cfg = ISP_REFERRAL[isp];
+  if(!cfg) return null;
+  try{
+    const url = new URL(cfg.url);
+    if(cfg.code) url.searchParams.set("ref", cfg.code);
+    url.searchParams.set("utm_source", "zw-isp-tracker");
+    url.searchParams.set("utm_medium", "referral");
+    url.searchParams.set("utm_campaign", context || "detail");
+    return url.toString();
+  }catch(e){ return cfg.url; }
+}
+function referralHtml(isp, context){
+  const cfg = ISP_REFERRAL[isp];
+  if(!cfg) return "";
+  return `<div class="referral-cta">
+    <a class="btn small primary" data-role="referralLink" data-isp="${isp}" data-context="${context||'detail'}" href="${referralUrlFor(isp, context)}" target="_blank" rel="noopener sponsored">🔗 Sign up with ${isp}</a>
+    <span class="referral-disclosure">Sponsored link — we may earn a referral fee if you sign up</span>
+  </div>`;
+}
+async function logReferralClick(isp, context){
+  const entry = { isp, context: context||"detail", ts: Date.now() };
+  REFERRAL_CLICKS.push(entry);
+  saveLocalReferrals(REFERRAL_CLICKS);
+  if(supa){
+    try{
+      const { error } = await supa.from("referral_clicks").insert([{ site: SITE_ID, isp: entry.isp, context: entry.context }]);
+      if(error) throw error;
+    }catch(e){ console.warn("Could not sync referral click to shared backend", e); }
+  }
+}
+
+/* ---------- ISP-facing benchmarking export (sellable insights product) ----------
+   Packages data that already exists elsewhere in this app — QoS ratings,
+   live-status reliability, bandwidth tier, backbone visibility, and the
+   switch/signup flow — into a report shaped for a different reader than the
+   public site: an ISP's own team deciding whether independent, crowdsourced
+   perception data is worth paying to see regularly. Generating this report
+   is free; the monetizable product is a recurring, licensed version of it
+   (see README → "Monetization" for how that's meant to work). This in-app
+   export is the sample/teaser you'd show a prospective ISP customer. */
+function statusReliabilityPct(isp, windowMs){
+  const cutoff = Date.now() - (windowMs || 30*DAY);
+  const rs = STATUS_REPORTS.filter(r=>r.isp===isp && r.ts >= cutoff);
+  if(rs.length===0) return null;
+  const liveCount = rs.filter(r=>r.status==="live").length;
+  return { pct: (liveCount/rs.length)*100, sampleSize: rs.length };
+}
+function conversionFlowFor(isp){
+  const gained = CONVERSIONS.filter(c=>c.to_isp===isp);
+  const lost = CONVERSIONS.filter(c=>c.from_isp===isp);
+  const reasonCounts = {};
+  gained.forEach(c=>(c.reasons||[]).forEach(r=>{ reasonCounts[r] = (reasonCounts[r]||0)+1; }));
+  const topReasons = Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([r,n])=>`${r} (${n})`);
+  return { gained: gained.length, lost: lost.length, net: gained.length - lost.length, topReasons };
+}
+function competitivePositionTable(){
+  return DATA.map(d=>{
+    const qos = aggregate(d.name);
+    const speedCalib = calibratedSpeed(d.name);
+    const rel = statusReliabilityPct(d.name);
+    return {
+      name: d.name,
+      qosAvg: qos.count ? qos.avg : null,
+      qosCount: qos.count,
+      downloadMbps: speedCalib ? speedCalib.downloadMbps : null,
+      reliabilityPct: rel ? rel.pct : null
+    };
+  }).sort((a,b)=>(b.qosAvg||0)-(a.qosAvg||0));
+}
+function buildBenchmarkReportHtml(ispName){
+  const d = DATA.find(x=>x.name===ispName);
+  if(!d) return null;
+  const qos = aggregate(ispName);
+  const rel = statusReliabilityPct(ispName);
+  const speedAgg = speedAggregateAll();
+  const speedCalib = calibratedSpeed(ispName);
+  const speedTierVal = speedCalib ? speedTier(speedCalib.downloadMbps, speedAgg.overallAvgDown) : null;
+  const backbone = BACKBONE[ispName];
+  const flow = conversionFlowFor(ispName);
+  const table = competitivePositionTable();
+  const rankPos = table.findIndex(r=>r.name===ispName) + 1;
+  const refClicks = REFERRAL_CLICKS.filter(r=>r.isp===ispName).length;
+
+  const rowsHtml = table.map((r,i)=>`
+    <tr style="${r.name===ispName?'background:#fffbe6;font-weight:600;':''}">
+      <td>${i+1}</td><td>${r.name}</td>
+      <td>${r.qosAvg!==null ? r.qosAvg.toFixed(1)+"★ ("+r.qosCount+")" : "—"}</td>
+      <td>${r.downloadMbps!==null ? r.downloadMbps.toFixed(1)+" Mbps" : "—"}</td>
+      <td>${r.reliabilityPct!==null ? r.reliabilityPct.toFixed(0)+"%" : "—"}</td>
+    </tr>`).join("");
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Benchmarking Report — ${ispName}</title>
+  <style>
+    body{font-family:Georgia,'Times New Roman',serif;max-width:800px;margin:40px auto;color:#1a1a1a;line-height:1.5;padding:0 16px;}
+    h1{font-size:26px;margin-bottom:4px;} h2{font-size:18px;margin-top:32px;border-bottom:2px solid #222;padding-bottom:4px;}
+    .cover-sub{color:#555;margin-bottom:24px;} .stat-grid{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0;}
+    .stat-card{border:1px solid #ccc;border-radius:8px;padding:12px 16px;min-width:140px;}
+    .stat-num{font-size:22px;font-weight:700;} .stat-lbl{font-size:12px;color:#666;}
+    table{width:100%;border-collapse:collapse;margin-top:12px;} td,th{border:1px solid #ccc;padding:6px 8px;font-size:13px;text-align:left;}
+    .cta{margin-top:36px;padding:16px;border:2px dashed #888;border-radius:8px;background:#fafafa;}
+    .disclosure{font-size:11px;color:#888;margin-top:28px;}
+    @media print{ .no-print{display:none;} }
+  </style></head><body>
+    <button class="no-print" onclick="window.print()" style="float:right;">🖨️ Print / Save as PDF</button>
+    <h1>Independent ISP Benchmarking Report</h1>
+    <div class="cover-sub">Prepared for <strong>${ispName}</strong> — generated ${new Date().toLocaleDateString()} from live, crowdsourced data on the Zimbabwe ISP Tracker</div>
+
+    <h2>Executive summary</h2>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">#${rankPos} of ${table.length}</div><div class="stat-lbl">Rank by QoS rating</div></div>
+      <div class="stat-card"><div class="stat-num">${qos.count ? qos.avg.toFixed(1)+"★" : "—"}</div><div class="stat-lbl">Avg QoS (${qos.count} ratings)</div></div>
+      <div class="stat-card"><div class="stat-num">${rel ? rel.pct.toFixed(0)+"%" : "—"}</div><div class="stat-lbl">Reported "live" (30d, n=${rel?rel.sampleSize:0})</div></div>
+      <div class="stat-card"><div class="stat-num">${speedCalib ? speedCalib.downloadMbps.toFixed(1)+" Mbps" : "—"}</div><div class="stat-lbl">24h avg download${speedTierVal?" · "+SPEED_TIER_META[speedTierVal].label:""}</div></div>
+      <div class="stat-card"><div class="stat-num">${flow.net>=0?"+":""}${flow.net}</div><div class="stat-lbl">Net switches (${flow.gained} gained / ${flow.lost} lost)</div></div>
+    </div>
+    ${backbone ? `<p>🌐 Backbone visibility (live, RIPEstat): <strong>${BACKBONE_META[backbone.level].label}</strong> — seen by ${Math.round(backbone.ratio*100)}% of monitored routers worldwide.</p>` : ""}
+
+    <h2>Why customers switched to ${ispName}</h2>
+    <p>${flow.topReasons.length ? "Top cited reasons: " + flow.topReasons.join(", ") + "." : "Not enough switch reports yet to identify a pattern."}</p>
+    ${refClicks ? `<p>${refClicks} referral click-through${refClicks===1?'':'s'} recorded from this site.</p>` : ""}
+
+    <h2>Competitive position — all tracked ISPs</h2>
+    <table><thead><tr><th>#</th><th>ISP</th><th>QoS</th><th>Download (24h)</th><th>Live reliability (30d)</th></tr></thead>
+    <tbody>${rowsHtml}</tbody></table>
+
+    <h2>Methodology</h2>
+    <p style="font-size:13px;color:#444;">QoS is a simple average of 1–5★ crowdsourced ratings. Live reliability is the
+    share of status reports marked "live" (vs. partial/down) over the trailing 30 days — a self-reported proxy, not a
+    monitored SLA. Bandwidth is a 24-hour, half-hour-bucketed average of crowdsourced speed tests (see the Bandwidth
+    section of the live site for the full calibration method). Backbone visibility, where shown, is a live BGP-routing
+    signal from RIPEstat, not a last-mile quality measure. None of this is independently verified or standardized —
+    treat it as directional public sentiment, not a certified benchmark.</p>
+
+    <div class="cta">
+      <strong>This is a free sample.</strong> A licensed subscription gets ${ispName} a monthly refreshed report,
+      historical trend charts, raw anonymized comment access, and priority flagging of emerging complaint clusters —
+      reach out via the contact details on the live site to discuss.
+    </div>
+    <div class="disclosure">Generated automatically from publicly crowdsourced data at the Zimbabwe ISP Tracker. Not
+    affiliated with, endorsed by, or verified against ${ispName}'s own internal metrics.</div>
+  </body></html>`;
+}
+function openBenchmarkReport(ispName){
+  const html = buildBenchmarkReportHtml(ispName);
+  if(!html) return;
+  const win = window.open("", "_blank");
+  if(!win){ alert("Please allow pop-ups to view the benchmarking report, or use your browser's print-to-PDF on this page instead."); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+function renderList(){
+  const q = state.query.trim().toLowerCase();
+  let rows = DATA.filter(d=>{
+    if(state.filter!=="all" && d.type!==state.filter) return false;
+    if(q && !d.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  rows = rows.slice().sort((a,b)=>{
+    if(a.subscribers===null && b.subscribers===null) return 0;
+    if(a.subscribers===null) return 1;
+    if(b.subscribers===null) return -1;
+    return b.subscribers - a.subscribers;
+  });
+
+  const list = document.getElementById("list");
+  if(rows.length===0){
+    list.innerHTML = `<div class="row" style="cursor:default;color:var(--muted);">No providers match your search/filter.</div>`;
+    return;
+  }
+
+  const convAgg = conversionsAggregate();
+  const speedAgg = speedAggregateAll();
+
+  list.innerHTML = rows.map((d,i)=>{
+    const rank = d.subscribers!==null ? (i+1) : "–";
+    const qos = aggregate(d.name);
+    const isOpen = openRows.has(d.name);
+    const cityBars = qos.byCity.length ? `<div class="city-bars">${qos.byCity.map(c=>{
+        const pct = Math.max(6, Math.round((c.count/qos.count)*100));
+        return `<div class="city-bar-row"><span class="city-name">${c.city}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="city-meta">${c.avg.toFixed(1)}★ · ${c.count}</span></div>`;
+      }).join("")}</div>` : "";
+    const convCount = convAgg.byIsp[d.name] || 0;
+    const impactBadge = convCount ? `<div class="impact-badge">${t("impact_badge").replace("{n}", convCount)}</div>` : "";
+    const ov = overallStatus(d.name);
+    const rowStatusDot = ov
+      ? `<span class="status-dot" style="background:${STATUS_META[ov.level].color}" title="${STATUS_META[ov.level].label}"></span>`
+      : `<span class="status-dot status-dot-empty" title="No status reports yet"></span>`;
+    const speedCalib = calibratedSpeed(d.name);
+    const speedTierVal = speedCalib ? speedTier(speedCalib.downloadMbps, speedAgg.overallAvgDown) : null;
+    const speedTierMeta = speedTierVal ? SPEED_TIER_META[speedTierVal] : null;
+    const speedSummaryHtml = speedCalib
+      ? `<span style="color:${speedTierMeta.color};font-weight:600;">${speedCalib.downloadMbps.toFixed(1)} Mbps ↓ / ${speedCalib.uploadMbps.toFixed(1)} Mbps ↑</span> <span class="muted">(${speedTierMeta.label} · ${speedCalib.reportCount} report${speedCalib.reportCount===1?'':'s'} in ${speedCalib.buckets} 30-min window${speedCalib.buckets===1?'':'s'})</span>`
+      : `<span class="muted">${t("no_speed_data")}</span>`;
+    return `
+    <div class="row ${isOpen?'open':''}" data-name="${d.name}">
+      <div class="row-top" data-role="toggle">
+        <div class="rank">${rank}</div>
+        <div class="name-wrap">
+          <div class="name">${rowStatusDot}${d.name}</div>
+          <div class="type">${d.type}</div>
+        </div>
+        <div class="subs">${fmt(d.subscribers)}<small>${d.subLabel}</small></div>
+        <div class="qos-badge ${qos.count?'':'empty'}">${qos.count ? starString(Math.round(qos.avg))+" "+qos.avg.toFixed(1)+" ("+qos.count+")" : t("no_ratings_yet")}</div>
+        <div class="pill ${d.status}" data-role="pill">${STATUS_LABEL[d.status]}</div>
+        <div class="caret">▶</div>
+      </div>
+      <div class="detail">
+        <div class="detail-inner">
+          ${d.note}
+          <span class="src">Source: ${d.source}</span>
+          ${impactBadge}
+          ${referralHtml(d.name, "detail")}
+          <div class="qos-actions" style="margin-top:6px;">
+            <button class="btn small" data-role="benchmarkBtn" type="button">📈 Benchmarking Report</button>
+          </div>
+
+          <div class="status-section">
+            <div class="qos-head">
+              <div class="qos-title">🚦 ${tt("live_status_title")}</div>
+            </div>
+            ${backboneHtml(d.name)}
+            ${liveStatusHtml(d.name)}
+            ${recentStatusReportsHtml(d.name)}
+            <div class="qos-actions">
+              <button class="btn small" data-role="statusBtn" type="button">🚦 ${tt("report_status")}</button>
+              <span class="sync-note">${supa ? t("sync_shared") : t("sync_local")}</span>
+            </div>
+            <div class="status-report-form" data-role="statusForm">
+              <div class="status-choices" data-role="statusChoices">
+                <button type="button" class="status-choice choice-live" data-status="live">🟢 ${t("status_live")}</button>
+                <button type="button" class="status-choice choice-partial" data-status="partial">🟡 ${t("status_partial")}</button>
+                <button type="button" class="status-choice choice-down" data-status="down">🔴 ${t("status_down")}</button>
+              </div>
+              <div class="loc-row">
+                <button class="btn small" data-role="statusLocBtn" type="button">📍 ${tt("btn_use_location")}</button>
+                <select class="city-select" data-role="statusCitySelect">
+                  <option value="">${t("city_manual")}</option>
+                  ${CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("")}
+                </select>
+              </div>
+              <div class="loc-status" data-role="statusLocStatus"></div>
+              <textarea class="comment-box" data-role="statusCommentBox" maxlength="500" placeholder="${t("comment_placeholder")}"></textarea>
+              <button class="btn small primary" data-role="statusSubmitBtn" type="button">${tt("btn_submit_status")}</button>
+            </div>
+          </div>
+
+          <div class="speed-detail-section">
+            <div class="qos-head">
+              <div class="qos-title">📶 ${tt("bandwidth_title")}</div>
+              <div class="qos-avg">${speedSummaryHtml}</div>
+            </div>
+            ${recentSpeedReportsHtml(d.name)}
+            <div class="qos-actions">
+              <button class="btn small" data-role="speedBtn" type="button">📶 ${tt("report_speed")}</button>
+              <span class="sync-note">${supa ? t("sync_shared") : t("sync_local")}</span>
+            </div>
+            <div class="speed-report-form" data-role="speedForm">
+              <div class="qos-actions" style="margin-bottom:8px;">
+                <button class="btn small" data-role="speedAutoBtn" type="button">${t("btn_run_speed_test")}</button>
+                <span class="muted" style="font-size:11px;" data-role="speedAutoNote">${t("speed_auto_note")}</span>
+              </div>
+              <div class="loc-status" data-role="speedAutoStatus"></div>
+              <div class="speed-input-row">
+                <div class="speed-input-field">
+                  <div class="speed-input-label">${t("download_label")}</div>
+                  <input type="number" class="speed-input" data-role="speedDownInput" min="0" max="10000" step="0.1" placeholder="e.g. 25.4">
+                </div>
+                <div class="speed-input-field">
+                  <div class="speed-input-label">${t("upload_label")}</div>
+                  <input type="number" class="speed-input" data-role="speedUpInput" min="0" max="10000" step="0.1" placeholder="e.g. 8.2">
+                </div>
+              </div>
+              <div class="loc-row">
+                <button class="btn small" data-role="speedLocBtn" type="button">📍 ${tt("btn_use_location")}</button>
+                <select class="city-select" data-role="speedCitySelect">
+                  <option value="">${t("city_manual")}</option>
+                  ${CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("")}
+                </select>
+              </div>
+              <div class="loc-status" data-role="speedLocStatus"></div>
+              <textarea class="comment-box" data-role="speedCommentBox" maxlength="500" placeholder="${t("comment_placeholder")}"></textarea>
+              <button class="btn small primary" data-role="speedSubmitBtn" type="button">${tt("btn_submit_speed")}</button>
+            </div>
+          </div>
+
+          <div class="qos-section">
+            <div class="qos-head">
+              <div class="qos-title">📶 ${tt("qos_title")}</div>
+              <div class="qos-avg">${qos.count ? starString(Math.round(qos.avg))+" "+qos.avg.toFixed(1) : t("no_ratings_yet")} <span class="muted">(${qos.count} report${qos.count===1?'':'s'})</span></div>
+            </div>
+            ${cityBars}
+            ${recentReportsHtml(d.name)}
+            <div class="qos-actions">
+              <button class="btn small" data-role="rateBtn" type="button">⭐ ${tt("btn_rate")}</button>
+              <span class="sync-note">${supa ? t("sync_shared") : t("sync_local")}</span>
+            </div>
+            <div class="rate-form" data-role="rateForm">
+              <div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${tt("your_rating")}</div>
+                <span class="star-picker" data-role="starPicker" data-selected="0">
+                  <span class="star-pick" data-val="1">☆</span><span class="star-pick" data-val="2">☆</span><span class="star-pick" data-val="3">☆</span><span class="star-pick" data-val="4">☆</span><span class="star-pick" data-val="5">☆</span>
+                </span>
+              </div>
+              <div class="loc-row">
+                <button class="btn small" data-role="locBtn" type="button">📍 ${tt("btn_use_location")}</button>
+                <select class="city-select" data-role="citySelect">
+                  <option value="">${t("city_manual")}</option>
+                  ${CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("")}
+                </select>
+              </div>
+              <div class="loc-status" data-role="locStatus"></div>
+              <input type="tel" class="search" data-role="phoneInput" placeholder="${t("phone_placeholder")}" style="width:100%;">
+              <div class="loc-status" data-role="phoneHint"></div>
+              <div class="lexicon-note" style="margin:0;">${t("phone_consent")}</div>
+              <textarea class="comment-box" data-role="commentBox" maxlength="500" placeholder="${t("comment_placeholder")}"></textarea>
+              <button class="btn small primary" data-role="submitBtn" type="button">${tt("btn_submit_rating")}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  // wire up interactions
+  list.querySelectorAll(".row").forEach(rowEl=>{
+    const name = rowEl.getAttribute("data-name");
+    const dataObj = DATA.find(d=>d.name===name);
+
+    rowEl.querySelector('[data-role="toggle"]').addEventListener("click", ()=>{
+      if(openRows.has(name)){ openRows.delete(name); rowEl.classList.remove("open"); }
+      else { openRows.add(name); rowEl.classList.add("open"); }
+    });
+
+    rowEl.querySelector('[data-role="pill"]').addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const idx = STATUS_CYCLE.indexOf(dataObj.status);
+      dataObj.status = STATUS_CYCLE[(idx+1)%STATUS_CYCLE.length];
+      renderList();
+      renderStats();
+    });
+
+    const rateBtn = rowEl.querySelector('[data-role="rateBtn"]');
+    const rateForm = rowEl.querySelector('[data-role="rateForm"]');
+    rateBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      rateForm.style.display = (rateForm.style.display === "flex") ? "none" : "flex";
+    });
+
+    const starPicker = rowEl.querySelector('[data-role="starPicker"]');
+    starPicker.querySelectorAll(".star-pick").forEach(starEl=>{
+      starEl.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const val = starEl.getAttribute("data-val");
+        starPicker.dataset.selected = val;
+        starPicker.querySelectorAll(".star-pick").forEach(s2=>{
+          s2.textContent = (Number(s2.getAttribute("data-val")) <= Number(val)) ? "★" : "☆";
+        });
+      });
+    });
+
+    const locBtn = rowEl.querySelector('[data-role="locBtn"]');
+    const locStatus = rowEl.querySelector('[data-role="locStatus"]');
+    const citySelect = rowEl.querySelector('[data-role="citySelect"]');
+
+    locBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      if(!navigator.geolocation){
+        locStatus.textContent = "Geolocation isn't supported here — pick a city manually.";
+        return;
+      }
+      locStatus.textContent = "Detecting your location…";
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const { latitude, longitude } = pos.coords;
+        const { city, distanceKm } = nearestCity(latitude, longitude);
+        rateForm.dataset.city = city;
+        citySelect.value = city;
+        locStatus.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
+      }, err=>{
+        locStatus.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
+      }, {timeout:8000});
+    });
+
+    citySelect.addEventListener("click", (e)=> e.stopPropagation());
+    citySelect.addEventListener("change",(e)=>{
+      rateForm.dataset.city = citySelect.value;
+      locStatus.textContent = citySelect.value ? "City set to "+citySelect.value : "";
+    });
+
+    const commentBox = rowEl.querySelector('[data-role="commentBox"]');
+    commentBox.addEventListener("click",(e)=> e.stopPropagation());
+
+    const phoneInput = rowEl.querySelector('[data-role="phoneInput"]');
+    const phoneHint = rowEl.querySelector('[data-role="phoneHint"]');
+    phoneInput.addEventListener("click",(e)=> e.stopPropagation());
+    phoneInput.addEventListener("input",(e)=>{
+      e.stopPropagation();
+      const detected = detectIspFromPhone(phoneInput.value);
+      if(!detected){ phoneHint.textContent = ""; return; }
+      phoneHint.textContent = t("phone_detect_hint").replace("{isp}", detected)
+        + (detected !== name ? "" : " ✓");
+    });
+
+    const submitBtn = rowEl.querySelector('[data-role="submitBtn"]');
+    submitBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const stars = Number(starPicker.dataset.selected || "0");
+      if(stars < 1){
+        locStatus.textContent = "Pick a star rating before submitting.";
+        return;
+      }
+      const city = rateForm.dataset.city || "Unknown";
+      const phone = (phoneInput.value||"").trim();
+      submitReport({ isp:name, stars, comment:(commentBox.value||"").trim(), city, ts: Date.now() });
+      if(phone) upsertCustomer(phone, detectIspFromPhone(phone));
+      phoneInput.value = ""; phoneHint.textContent = "";
+    });
+
+    const referralLink = rowEl.querySelector('[data-role="referralLink"]');
+    if(referralLink){
+      referralLink.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        logReferralClick(referralLink.getAttribute("data-isp"), referralLink.getAttribute("data-context"));
+      });
+    }
+    const benchmarkBtn = rowEl.querySelector('[data-role="benchmarkBtn"]');
+    if(benchmarkBtn){
+      benchmarkBtn.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        openBenchmarkReport(name);
+      });
+    }
+
+    const statusBtn = rowEl.querySelector('[data-role="statusBtn"]');
+    const statusForm = rowEl.querySelector('[data-role="statusForm"]');
+    statusBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      statusForm.style.display = (statusForm.style.display === "flex") ? "none" : "flex";
+    });
+
+    const statusChoices = rowEl.querySelector('[data-role="statusChoices"]');
+    statusChoices.querySelectorAll(".status-choice").forEach(choiceBtn=>{
+      choiceBtn.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        statusChoices.querySelectorAll(".status-choice").forEach(b=>b.classList.remove("active"));
+        choiceBtn.classList.add("active");
+        statusForm.dataset.status = choiceBtn.getAttribute("data-status");
+      });
+    });
+
+    const statusLocBtn = rowEl.querySelector('[data-role="statusLocBtn"]');
+    const statusLocStatus = rowEl.querySelector('[data-role="statusLocStatus"]');
+    const statusCitySelect = rowEl.querySelector('[data-role="statusCitySelect"]');
+
+    statusLocBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      if(!navigator.geolocation){
+        statusLocStatus.textContent = "Geolocation isn't supported here — pick a city manually.";
+        return;
+      }
+      statusLocStatus.textContent = "Detecting your location…";
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const { latitude, longitude } = pos.coords;
+        const { city, distanceKm } = nearestCity(latitude, longitude);
+        statusForm.dataset.city = city;
+        statusCitySelect.value = city;
+        statusLocStatus.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
+      }, err=>{
+        statusLocStatus.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
+      }, {timeout:8000});
+    });
+
+    statusCitySelect.addEventListener("click", (e)=> e.stopPropagation());
+    statusCitySelect.addEventListener("change",(e)=>{
+      statusForm.dataset.city = statusCitySelect.value;
+      statusLocStatus.textContent = statusCitySelect.value ? "City set to "+statusCitySelect.value : "";
+    });
+
+    const statusCommentBox = rowEl.querySelector('[data-role="statusCommentBox"]');
+    statusCommentBox.addEventListener("click",(e)=> e.stopPropagation());
+
+    const statusSubmitBtn = rowEl.querySelector('[data-role="statusSubmitBtn"]');
+    statusSubmitBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const status = statusForm.dataset.status;
+      if(!status){
+        statusLocStatus.textContent = "Pick Live, Partial or Down before submitting.";
+        return;
+      }
+      const city = statusForm.dataset.city || "Unknown";
+      submitStatus({ isp:name, city, status, comment:(statusCommentBox.value||"").trim(), ts: Date.now() });
+      statusForm.dataset.status = "";
+      statusChoices.querySelectorAll(".status-choice").forEach(b=>b.classList.remove("active"));
+      statusCommentBox.value = "";
+    });
+
+    const speedBtn = rowEl.querySelector('[data-role="speedBtn"]');
+    const speedForm = rowEl.querySelector('[data-role="speedForm"]');
+    speedBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      speedForm.style.display = (speedForm.style.display === "flex") ? "none" : "flex";
+    });
+
+    const speedDownInput = rowEl.querySelector('[data-role="speedDownInput"]');
+    const speedUpInput = rowEl.querySelector('[data-role="speedUpInput"]');
+    speedDownInput.addEventListener("click",(e)=> e.stopPropagation());
+    speedUpInput.addEventListener("click",(e)=> e.stopPropagation());
+
+    const speedLocBtn = rowEl.querySelector('[data-role="speedLocBtn"]');
+    const speedLocStatus = rowEl.querySelector('[data-role="speedLocStatus"]');
+    const speedCitySelect = rowEl.querySelector('[data-role="speedCitySelect"]');
+
+    speedLocBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      if(!navigator.geolocation){
+        speedLocStatus.textContent = "Geolocation isn't supported here — pick a city manually.";
+        return;
+      }
+      speedLocStatus.textContent = "Detecting your location…";
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const { latitude, longitude } = pos.coords;
+        const { city, distanceKm } = nearestCity(latitude, longitude);
+        speedForm.dataset.city = city;
+        speedCitySelect.value = city;
+        speedLocStatus.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
+      }, err=>{
+        speedLocStatus.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
+      }, {timeout:8000});
+    });
+
+    speedCitySelect.addEventListener("click", (e)=> e.stopPropagation());
+    speedCitySelect.addEventListener("change",(e)=>{
+      speedForm.dataset.city = speedCitySelect.value;
+      speedLocStatus.textContent = speedCitySelect.value ? "City set to "+speedCitySelect.value : "";
+    });
+
+    const speedCommentBox = rowEl.querySelector('[data-role="speedCommentBox"]');
+    speedCommentBox.addEventListener("click",(e)=> e.stopPropagation());
+
+    const speedAutoBtn = rowEl.querySelector('[data-role="speedAutoBtn"]');
+    const speedAutoStatus = rowEl.querySelector('[data-role="speedAutoStatus"]');
+    if(speedAutoBtn){
+      if(!speedTestSupported()){
+        speedAutoBtn.style.display = "none";
+        if(speedAutoStatus) speedAutoStatus.textContent = t("speed_auto_unsupported");
+      } else {
+        speedAutoBtn.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          runAutoSpeedTest(rowEl, speedDownInput, speedUpInput, speedAutoBtn, speedAutoStatus);
+        });
+      }
+    }
+
+    const speedSubmitBtn = rowEl.querySelector('[data-role="speedSubmitBtn"]');
+    speedSubmitBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const downloadVal = parseFloat(speedDownInput.value);
+      const uploadVal = parseFloat(speedUpInput.value);
+      if(!(downloadVal >= 0) || !(uploadVal >= 0)){
+        speedLocStatus.textContent = "Enter both a download and an upload speed (Mbps) before submitting.";
+        return;
+      }
+      const city = speedForm.dataset.city || "Unknown";
+      let extra = {};
+      try{ extra = rowEl.dataset.speedExtra ? JSON.parse(rowEl.dataset.speedExtra) : {}; }catch(parseErr){}
+      submitSpeed({
+        isp:name, city, download_mbps: downloadVal, upload_mbps: uploadVal,
+        comment:(speedCommentBox.value||"").trim(), ts: Date.now(),
+        test_method: extra.test_method || "manual",
+        latency_idle_ms: extra.latency_idle_ms ?? null,
+        latency_download_ms: extra.latency_download_ms ?? null,
+        latency_upload_ms: extra.latency_upload_ms ?? null,
+        jitter_download_ms: extra.jitter_download_ms ?? null,
+        jitter_upload_ms: extra.jitter_upload_ms ?? null,
+        packet_loss_pct: extra.packet_loss_pct ?? null,
+        connection_type: extra.connection_type ?? null,
+        device_type: extra.device_type ?? null
+      });
+      speedDownInput.value = "";
+      speedUpInput.value = "";
+      speedCommentBox.value = "";
+      delete rowEl.dataset.speedExtra;
+      if(speedAutoStatus) speedAutoStatus.textContent = "";
+    });
+  });
+}
+
+/* ---------- Automatic speed test (Cloudflare Speed Test, client-side, free/open-source) ---------- */
+function speedTestSupported(){
+  return !!(window.fetch && window.Promise && typeof Worker !== "undefined");
+}
+
+async function runAutoSpeedTest(rowEl, downInput, upInput, autoBtn, statusEl){
+  if(!window.__CFSpeedTest){
+    if(statusEl) statusEl.textContent = t("speed_auto_unsupported");
+    return;
+  }
+  autoBtn.disabled = true;
+  if(statusEl) statusEl.textContent = t("speed_auto_running");
+  try{
+    const test = new window.__CFSpeedTest({
+      autoStart: true,
+      // A deliberately light measurement profile — this audience includes people on
+      // metered/expensive mobile data, so we favor "usually a few MB" over exhaustive
+      // accuracy. See SKILL.md for the reasoning and how to tune this.
+      measurements: [
+        { type: "latency", numPackets: 1 },
+        { type: "download", bytes: 1e6, count: 3 },
+        { type: "latency", numPackets: 20 },
+        { type: "upload", bytes: 5e5, count: 3 },
+        { type: "packetLoss", numPackets: 500 }
+      ]
+    });
+    await new Promise((resolve, reject)=>{
+      test.onFinish = ()=>resolve();
+      test.onError = (err)=>reject(err);
+    });
+    const s = test.results.getSummary();
+    const downloadMbps = s.download!=null ? s.download/1e6 : null;
+    const uploadMbps = s.upload!=null ? s.upload/1e6 : null;
+    if(downloadMbps!=null) downInput.value = downloadMbps.toFixed(1);
+    if(uploadMbps!=null) upInput.value = uploadMbps.toFixed(1);
+    rowEl.dataset.speedExtra = JSON.stringify({
+      test_method: "auto",
+      latency_idle_ms: s.latency ?? null,
+      latency_download_ms: s.downLoadedLatency ?? null,
+      latency_upload_ms: s.upLoadedLatency ?? null,
+      jitter_download_ms: s.downLoadedJitter ?? null,
+      jitter_upload_ms: s.upLoadedJitter ?? null,
+      packet_loss_pct: s.packetLoss!=null ? s.packetLoss*100 : null,
+      connection_type: (navigator.connection && navigator.connection.effectiveType) || null,
+      device_type: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop"
+    });
+    if(statusEl) statusEl.textContent = t("speed_auto_done");
+  }catch(e){
+    console.warn("Automatic speed test failed — falling back to manual entry", e);
+    if(statusEl) statusEl.textContent = t("speed_auto_failed");
+  }finally{
+    autoBtn.disabled = false;
+  }
+}
+
+function renderImpact(){
+  const toSel = document.getElementById("impactToIsp");
+  const fromSel = document.getElementById("impactFromIsp");
+  if(toSel.options.length <= 1){
+    toSel.innerHTML = `<option value="">—</option>` + DATA.map(d=>`<option value="${d.name}">${d.name}</option>`).join("");
+    fromSel.innerHTML = `<option value="">—</option>` + DATA.map(d=>`<option value="${d.name}">${d.name}</option>`).join("");
+  }
+  document.getElementById("impactReferralCta").innerHTML = referralHtml(toSel.value, "switch_form");
+
+  const agg = conversionsAggregate();
+  document.getElementById("impactStats").innerHTML = [
+    {num: agg.total, lbl: t("stat_conversions")},
+    {num: Object.entries(agg.byIsp).sort((a,b)=>b[1]-a[1])[0] ? Object.entries(agg.byIsp).sort((a,b)=>b[1]-a[1])[0][0] : "—", lbl:"top ISP for switches/signups"},
+    {num: Object.entries(agg.byReason).sort((a,b)=>b[1]-a[1])[0] ? t("reason_"+Object.entries(agg.byReason).sort((a,b)=>b[1]-a[1])[0][0]) : "—", lbl:"top reported reason"}
+  ].map(s=>`<div class="stat"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`).join("");
+
+  const byIspSorted = Object.entries(agg.byIsp).sort((a,b)=>b[1]-a[1]);
+  const byReasonSorted = Object.entries(agg.byReason).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("impactBreakdown").innerHTML = agg.total ? `
+    <div class="city-bars">${byIspSorted.map(([isp,c])=>{
+      const pct = Math.max(6, Math.round((c/agg.total)*100));
+      return `<div class="city-bar-row"><span class="city-name">${isp}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="city-meta">${c}</span></div>`;
+    }).join("")}</div>
+    <div class="city-bars" style="margin-top:6px;">${byReasonSorted.map(([r,c])=>{
+      const pct = Math.max(6, Math.round((c/agg.total)*100));
+      return `<div class="city-bar-row"><span class="city-name">${t("reason_"+r)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="city-meta">${c}</span></div>`;
+    }).join("")}</div>
+  ` : `<div class="empty-note">No switches/signups reported yet.</div>`;
+
+  const recent = CONVERSIONS.slice().sort((a,b)=>b.ts-a.ts).slice(0,6);
+  document.getElementById("impactRecent").innerHTML = recent.map(c=>`
+    <div class="impact-story">
+      <strong>${c.from_isp ? c.from_isp : "New subscriber"}</strong> <span class="arrow">→</span> <strong>${c.to_isp}</strong>
+      · ${c.city} · ${relTime(c.ts)}<br>
+      <span style="color:var(--muted);">${(c.reasons||[]).map(r=>t("reason_"+r)).join(", ")}</span>
+      ${c.comment ? `<div class="report-comment">“${c.comment}”</div>` : ""}
+    </div>
+  `).join("");
+}
+
+function renderSpeedSection(){
+  const { entries, overallAvgDown, overallAvgUp } = speedAggregateAll();
+  const totalReportsWindow = entries.reduce((a,e)=>a+e.calib.reportCount,0);
+
+  document.getElementById("radarBenchmark").innerHTML = radarBenchmarkHtml();
+
+  document.getElementById("speedStats").innerHTML = [
+    {num: entries.length, lbl: t("stat_speed_isps")},
+    {num: entries.length ? overallAvgDown.toFixed(1)+" Mbps" : "—", lbl:"avg download across reporting ISPs (24h)"},
+    {num: entries.length ? overallAvgUp.toFixed(1)+" Mbps" : "—", lbl:"avg upload across reporting ISPs (24h)"},
+    {num: totalReportsWindow, lbl: t("stat_speed_reports")}
+  ].map(s=>`<div class="stat"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`).join("");
+
+  const maxDown = entries.length ? Math.max(...entries.map(e=>e.calib.downloadMbps)) : 0;
+  const rankedHtml = entries.map((e,i)=>{
+    const tier = speedTier(e.calib.downloadMbps, overallAvgDown);
+    const meta = SPEED_TIER_META[tier];
+    const pct = maxDown>0 ? Math.max(6, Math.round((e.calib.downloadMbps/maxDown)*100)) : 6;
+    return `<div class="speed-rank-row">
+      <div class="speed-rank-num">${i+1}</div>
+      <div class="speed-rank-name"><span class="status-dot" style="background:${meta.color}"></span>${e.isp}</div>
+      <div class="speed-rank-bars">
+        <div class="speed-bar-track"><div class="speed-bar-fill" style="width:${pct}%;background:${meta.color}"></div></div>
+        <div class="speed-bar-label">${e.calib.downloadMbps.toFixed(1)} Mbps ↓ · ${e.calib.uploadMbps.toFixed(1)} Mbps ↑</div>
+      </div>
+      <div class="speed-tier-badge" style="background:${meta.color}22;color:${meta.color};">${meta.label}</div>
+    </div>`;
+  }).join("");
+
+  const noDataIsps = DATA.filter(d=>!entries.find(e=>e.isp===d.name)).map(d=>d.name);
+  const noDataHtml = noDataIsps.length ? `<div class="speed-no-data-list">${t("speed_no_recent")}: ${noDataIsps.join(", ")}</div>` : "";
+
+  document.getElementById("speedRankedList").innerHTML = entries.length
+    ? `<div class="speed-rank-list">${rankedHtml}</div>${noDataHtml}`
+    : `<div class="empty-note">${t("speed_no_recent_any")}</div>${noDataHtml}`;
+}
+
+function renderTranslatePanel(){
+  const keySelect = document.getElementById("suggestKey");
+  if(keySelect.options.length === 0){
+    keySelect.innerHTML = TRANSLATABLE_KEYS.map(k=>`<option value="${k}">${k} — "${I18N.en[k]}"</option>`).join("");
+  }
+  const langSel = document.getElementById("suggestLang").value || "sn";
+  const keySel = keySelect.value || TRANSLATABLE_KEYS[0];
+  const currentBase = (I18N[langSel]||{})[keySel];
+  const currentOverride = (translationOverrides[langSel]||{})[keySel];
+  document.getElementById("suggestCurrent").textContent = "Current: " + (currentOverride ? currentOverride+" (community-verified)" : (currentBase ? currentBase+" (draft)" : "— not yet translated —"));
+
+  const pending = TRANSLATIONS.filter(x=>x.status==="pending").sort((a,b)=>b.ts-a.ts);
+  const approved = TRANSLATIONS.filter(x=>x.status==="approved").sort((a,b)=>b.ts-a.ts);
+
+  const queue = document.getElementById("translateQueue");
+  let html = "";
+  if(pending.length){
+    html += `<div class="translate-queue-title">Pending review (${pending.length})</div>`;
+    html += pending.map(x=>`
+      <div class="translate-item">
+        <span class="tlang">${LANG_NAMES[x.lang]||x.lang}</span><span class="tkey">${x.string_key}</span>
+        <div class="ttext">${x.suggested_text}</div>
+        ${x.source_note ? `<div class="tsource">Source: ${x.source_note}</div>` : ""}
+        <div class="tactions">
+          <button class="btn small" data-role="endorseBtn" data-id="${x.id}" type="button">👍 Endorse (${x.endorsements||0}/2)</button>
+        </div>
+      </div>
+    `).join("");
+  }
+  if(approved.length){
+    html += `<div class="translate-queue-title">✅ Verified (${approved.length})</div>`;
+    html += approved.map(x=>`
+      <div class="translate-item">
+        <span class="tlang">${LANG_NAMES[x.lang]||x.lang}</span><span class="tkey">${x.string_key}</span>
+        <span class="verified-badge">✓</span>
+        <div class="ttext">${x.suggested_text}</div>
+        ${x.source_note ? `<div class="tsource">Source: ${x.source_note}</div>` : ""}
+      </div>
+    `).join("");
+  }
+  if(!pending.length && !approved.length){
+    html = `<div class="empty-note">No community suggestions yet — be the first to help translate.</div>`;
+  }
+  queue.innerHTML = html;
+
+  queue.querySelectorAll('[data-role="endorseBtn"]').forEach(btn=>{
+    btn.addEventListener("click", ()=> endorseTranslation(btn.getAttribute("data-id")));
+  });
+}
+
+function renderAll(){
+  applyStaticTranslations();
+  renderStats();
+  renderList();
+  renderImpact();
+  renderSpeedSection();
+  renderTranslatePanel();
+}
+
+document.getElementById("search").addEventListener("input", (e)=>{
+  state.query = e.target.value;
+  renderList();
+});
+
+document.querySelectorAll(".chip[data-filter]").forEach(chip=>{
+  chip.addEventListener("click", ()=>{
+    document.querySelectorAll(".chip[data-filter]").forEach(c=>c.classList.remove("active"));
+    chip.classList.add("active");
+    state.filter = chip.getAttribute("data-filter");
+    renderList();
+  });
+});
+
+document.querySelectorAll(".lang-chip").forEach(chip=>{
+  chip.addEventListener("click", ()=>{
+    currentLang = chip.getAttribute("data-lang");
+    try{ localStorage.setItem("zw_isp_lang", currentLang); }catch(e){}
+    renderAll();
+  });
+});
+
+document.getElementById("simpleModeToggle").addEventListener("click", ()=>{
+  const btn = document.getElementById("simpleModeToggle");
+  const active = document.body.classList.toggle("simple-mode");
+  btn.setAttribute("aria-pressed", active ? "true":"false");
+  document.getElementById("simpleModeLabel").textContent = active ? t("simple_mode_on") : t("simple_mode_off");
+});
+
+document.getElementById("toggleTranslatePanel").addEventListener("click", ()=>{
+  const panel = document.getElementById("translatePanel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+});
+
+document.getElementById("suggestLang").addEventListener("change", renderTranslatePanel);
+document.getElementById("suggestKey").addEventListener("change", renderTranslatePanel);
+document.getElementById("suggestSubmitBtn").addEventListener("click", ()=>{
+  const lang = document.getElementById("suggestLang").value;
+  const key = document.getElementById("suggestKey").value;
+  const text = document.getElementById("suggestText").value.trim();
+  const source = document.getElementById("suggestSource").value.trim();
+  if(!text){ alert("Please enter a suggested translation first."); return; }
+  submitTranslation({ lang, string_key:key, suggested_text:text, source_note:source });
+  document.getElementById("suggestText").value = "";
+  document.getElementById("suggestSource").value = "";
+});
+
+document.getElementById("impactLocBtn").addEventListener("click", ()=>{
+  const status = document.getElementById("impactLocStatus");
+  const citySelect = document.getElementById("impactCitySelect");
+  if(!navigator.geolocation){
+    status.textContent = "Geolocation isn't supported here — pick a city manually.";
+    return;
+  }
+  status.textContent = "Detecting your location…";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const { latitude, longitude } = pos.coords;
+    const { city, distanceKm } = nearestCity(latitude, longitude);
+    citySelect.value = city;
+    status.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
+  }, err=>{
+    status.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
+  }, {timeout:8000});
+});
+
+document.getElementById("impactToIsp").addEventListener("change", ()=>{
+  document.getElementById("impactReferralCta").innerHTML = referralHtml(document.getElementById("impactToIsp").value, "switch_form");
+});
+document.getElementById("impactReferralCta").addEventListener("click",(e)=>{
+  const link = e.target.closest('[data-role="referralLink"]');
+  if(!link) return;
+  logReferralClick(link.getAttribute("data-isp"), link.getAttribute("data-context"));
+});
+
+let impactFromIspTouched = false;
+document.getElementById("impactFromIsp").addEventListener("change", ()=>{ impactFromIspTouched = true; });
+document.getElementById("impactPhone").addEventListener("input", ()=>{
+  const phone = document.getElementById("impactPhone").value;
+  const detected = detectIspFromPhone(phone);
+  const fromSel = document.getElementById("impactFromIsp");
+  if(detected && !impactFromIspTouched && [...fromSel.options].some(o=>o.value===detected)){
+    fromSel.value = detected;
+  }
+  const status = document.getElementById("impactLocStatus");
+  status.textContent = detected ? t("phone_detect_hint").replace("{isp}", detected) : "";
+});
+
+document.getElementById("impactSubmitBtn").addEventListener("click", ()=>{
+  const toIsp = document.getElementById("impactToIsp").value;
+  const fromIsp = document.getElementById("impactFromIsp").value || null;
+  const city = document.getElementById("impactCitySelect").value || "Unknown";
+  const comment = document.getElementById("impactComment").value.trim();
+  const reasons = Array.from(document.querySelectorAll('[data-role="reasonCheck"]:checked')).map(el=>el.value);
+  const status = document.getElementById("impactLocStatus");
+  const phone = document.getElementById("impactPhone").value.trim();
+  if(!toIsp){ status.textContent = "Please choose which ISP you switched to / signed up with."; return; }
+  if(!phone || !isValidPhone(phone)){ status.textContent = t("phone_required_note"); return; }
+  submitConversion({ to_isp: toIsp, from_isp: fromIsp, reasons, city, comment, ts: Date.now() });
+  upsertCustomer(phone, detectIspFromPhone(phone));
+  document.getElementById("impactComment").value = "";
+  document.getElementById("impactPhone").value = "";
+  impactFromIspTouched = false;
+  document.querySelectorAll('[data-role="reasonCheck"]').forEach(el=> el.checked = false);
+  status.textContent = "Thanks — logged!";
+});
+
+document.getElementById("exportPdf").addEventListener("click", ()=>{
+  document.querySelectorAll(".row").forEach(r=>r.classList.add("open"));
+  window.print();
+});
+
+document.getElementById("exportCsv").addEventListener("click", ()=>{
+  const header = ["Rank","ISP","Type","Subscribers","Metric","Status","QoS Avg","QoS Reports","Note","Source"];
+  const rows = DATA.slice().sort((a,b)=>{
+    if(a.subscribers===null && b.subscribers===null) return 0;
+    if(a.subscribers===null) return 1;
+    if(b.subscribers===null) return -1;
+    return b.subscribers - a.subscribers;
+  }).map((d,i)=>{
+    const qos = aggregate(d.name);
+    return [
+      d.subscribers!==null ? i+1 : "",
+      d.name, d.type, d.subscribers!==null ? d.subscribers : "", d.subLabel,
+      STATUS_LABEL[d.status], qos.count? qos.avg.toFixed(2) : "", qos.count,
+      d.note.replace(/"/g,"'"), d.source
+    ];
+  });
+  downloadCsv(header, rows, "zimbabwe-isp-tracker.csv");
+});
+
+document.getElementById("exportQos").addEventListener("click", ()=>{
+  const header = ["ISP","Stars","City","Comment","Reported"];
+  const rows = REPORTS.slice().sort((a,b)=>b.ts-a.ts).map(r=>[
+    r.isp, r.stars, r.city, (r.comment||"").replace(/"/g,"'"), new Date(r.ts).toISOString()
+  ]);
+  downloadCsv(header, rows, "zimbabwe-isp-qos-reports.csv");
+});
+
+document.getElementById("exportStatus").addEventListener("click", ()=>{
+  const header = ["ISP","City","Status","Comment","Reported"];
+  const rows = STATUS_REPORTS.slice().sort((a,b)=>b.ts-a.ts).map(r=>[
+    r.isp, r.city, r.status, (r.comment||"").replace(/"/g,"'"), new Date(r.ts).toISOString()
+  ]);
+  downloadCsv(header, rows, "zimbabwe-isp-status-reports.csv");
+});
+
+document.getElementById("exportSpeed").addEventListener("click", ()=>{
+  const header = ["ISP","City","Download Mbps","Upload Mbps","Method","Idle Ping ms","Download Ping ms","Upload Ping ms","Jitter Down ms","Jitter Up ms","Packet Loss %","Connection","Device","Comment","Reported"];
+  const rows = SPEED_REPORTS.slice().sort((a,b)=>b.ts-a.ts).map(r=>[
+    r.isp, r.city, r.download_mbps, r.upload_mbps, r.test_method || "manual",
+    r.latency_idle_ms ?? "", r.latency_download_ms ?? "", r.latency_upload_ms ?? "",
+    r.jitter_download_ms ?? "", r.jitter_upload_ms ?? "", r.packet_loss_pct ?? "",
+    r.connection_type ?? "", r.device_type ?? "",
+    (r.comment||"").replace(/"/g,"'"), new Date(r.ts).toISOString()
+  ]);
+  downloadCsv(header, rows, "zimbabwe-isp-speed-reports.csv");
+});
+
+function downloadCsv(header, rows, filename){
+  const csv = [header, ...rows].map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- EPUB export (built client-side with JSZip) ---------- */
+function escapeXml(s){
+  return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function xhtmlWrap(title, body){
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>${escapeXml(title)}</title><meta charset="utf-8"/>
+<style>body{font-family:serif;line-height:1.5;} h1{font-size:1.6em;} h2{font-size:1.3em;margin-top:1.4em;} small{color:#555;}</style>
+</head>
+<body>${body}</body>
+</html>`;
+}
+async function buildEpub(){
+  const zip = new JSZip();
+  zip.file("mimetype", "application/epub+zip", {compression:"STORE"});
+  zip.folder("META-INF").file("container.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`);
+
+  const oebps = zip.folder("OEBPS");
+  const isRows = DATA.slice().sort((a,b)=>{
+    if(a.subscribers===null && b.subscribers===null) return 0;
+    if(a.subscribers===null) return 1;
+    if(b.subscribers===null) return -1;
+    return b.subscribers - a.subscribers;
+  });
+  const convAgg = conversionsAggregate();
+
+  const isChapterBody = "<h1>ISP Rankings &amp; Quality of Service</h1>" + isRows.map((d,i)=>{
+    const qos = aggregate(d.name);
+    const convCount = convAgg.byIsp[d.name] || 0;
+    const ov = overallStatus(d.name);
+    const statusText = ov ? STATUS_META[ov.level].label + ((ov.level==="down"||ov.level==="down-long") ? " ("+formatDuration(ov.downForMs)+")" : "") : "No status reports yet";
+    const speedCalib = calibratedSpeed(d.name);
+    const speedText = speedCalib ? speedCalib.downloadMbps.toFixed(1)+" Mbps down / "+speedCalib.uploadMbps.toFixed(1)+" Mbps up (24h, half-hour calibrated)" : "No speed tests in the last 24h";
+    return `<h2>${i+1}. ${escapeXml(d.name)}</h2>
+      <p><em>${escapeXml(d.type)}</em></p>
+      <p><strong>Subscribers:</strong> ${d.subscribers!==null?fmt(d.subscribers):'—'} (${escapeXml(d.subLabel)})</p>
+      <p>${escapeXml(d.note)}</p>
+      <p><small>Source: ${escapeXml(d.source)}</small></p>
+      <p><strong>Crowdsourced QoS:</strong> ${qos.count ? qos.avg.toFixed(1)+'★ from '+qos.count+' report(s)' : 'No ratings yet'}</p>
+      <p><strong>Reported live status:</strong> ${escapeXml(statusText)}</p>
+      <p><strong>Bandwidth:</strong> ${escapeXml(speedText)}</p>
+      ${convCount ? `<p><strong>Reported switches/signups:</strong> ${convCount}</p>` : ""}`;
+  }).join("\n<hr/>\n");
+
+  const impactBody = `<h1>Proof of Impact</h1>
+    <p>${convAgg.total} reported switch(es)/signup(s) logged via this tracker.</p>
+    <h2>By destination ISP</h2>
+    <ul>${Object.entries(convAgg.byIsp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<li>${escapeXml(k)}: ${v}</li>`).join("")}</ul>
+    <h2>By reason</h2>
+    <ul>${Object.entries(convAgg.byReason).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<li>${escapeXml(t("reason_"+k))}: ${v}</li>`).join("")}</ul>
+    <h2>Recent stories</h2>
+    <ul>${CONVERSIONS.slice().sort((a,b)=>b.ts-a.ts).slice(0,20).map(c=>
+      `<li>${escapeXml(c.from_isp||"New subscriber")} → ${escapeXml(c.to_isp)} (${escapeXml(c.city)}): ${escapeXml((c.reasons||[]).join(", "))}${c.comment? " — “"+escapeXml(c.comment)+"”":""}</li>`
+    ).join("")}</ul>`;
+
+  const chapters = [
+    { id:"titlepage", title:"Zimbabwe ISP Tracker", file:"title.xhtml",
+      body:`<h1>Zimbabwe ISP Tracker</h1><p>A POTRAZ-sourced subscriber tracker with crowdsourced quality-of-service ratings and reported switches/signups.</p><p>Generated ${new Date().toISOString().slice(0,10)}.</p>` },
+    { id:"isps", title:"ISP Rankings & QoS", file:"isps.xhtml", body:isChapterBody },
+    { id:"impact", title:"Proof of Impact", file:"impact.xhtml", body:impactBody }
+  ];
+  chapters.forEach(ch=> oebps.file(ch.file, xhtmlWrap(ch.title, ch.body)));
+
+  oebps.file("nav.xhtml", `<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head><title>Table of Contents</title></head>
+<body>
+<nav epub:type="toc" id="toc">
+<h1>Contents</h1>
+<ol>
+${chapters.map(ch=>`<li><a href="${ch.file}">${escapeXml(ch.title)}</a></li>`).join("\n")}
+</ol>
+</nav>
+</body>
+</html>`);
+
+  oebps.file("toc.ncx", `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head><meta name="dtb:uid" content="urn:uuid:zw-isp-tracker"/></head>
+  <docTitle><text>Zimbabwe ISP Tracker</text></docTitle>
+  <navMap>
+    ${chapters.map((ch,i)=>`<navPoint id="np${i+1}" playOrder="${i+1}"><navLabel><text>${escapeXml(ch.title)}</text></navLabel><content src="${ch.file}"/></navPoint>`).join("\n")}
+  </navMap>
+</ncx>`);
+
+  oebps.file("content.opf", `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookId">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="BookId">urn:uuid:zw-isp-tracker-${Date.now()}</dc:identifier>
+    <dc:title>Zimbabwe ISP Tracker</dc:title>
+    <dc:language>en</dc:language>
+    <dc:creator>Zimbabwe ISP Tracker (crowdsourced)</dc:creator>
+    <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/,'Z')}</meta>
+  </metadata>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+    ${chapters.map(ch=>`<item id="${ch.id}" href="${ch.file}" media-type="application/xhtml+xml"/>`).join("\n")}
+  </manifest>
+  <spine toc="ncx">
+    ${chapters.map(ch=>`<itemref idref="${ch.id}"/>`).join("\n")}
+  </spine>
+</package>`);
+
+  return zip.generateAsync({ type:"blob", mimeType:"application/epub+zip", compression:"DEFLATE" });
+}
+
+document.getElementById("exportEpub").addEventListener("click", async ()=>{
+  const btn = document.getElementById("exportEpub");
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = "⏳ Building EPUB…";
+  try{
+    const blob = await buildEpub();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "zimbabwe-isp-tracker.epub";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){
+    console.error("EPUB export failed", e);
+    alert("Sorry, EPUB export failed: " + e.message);
+  }finally{
+    btn.innerHTML = originalHtml;
+  }
+});
+
+document.getElementById("resetQos").addEventListener("click", async ()=>{
+  if(supa){
+    await initBackend();
+    return;
+  }
+  if(confirm("Reset all crowdsourced data (ratings, switch/signup reports, status reports, speed tests) back to the sample data set? This clears anything you've submitted in this browser.")){
+    REPORTS = SEED_REPORTS.slice();
+    CONVERSIONS = SEED_CONVERSIONS.slice();
+    STATUS_REPORTS = SEED_STATUS.slice();
+    SPEED_REPORTS = SEED_SPEED.slice();
+    REFERRAL_CLICKS = [];
+    saveLocalReports(REPORTS);
+    saveLocalConversions(CONVERSIONS);
+    saveLocalStatus(STATUS_REPORTS);
+    saveLocalSpeed(SPEED_REPORTS);
+    saveLocalReferrals(REFERRAL_CLICKS);
+    renderAll();
+  }
+});
+
+document.getElementById("fbSubmit").addEventListener("click", submitFeedback);
+
+renderAll();
+initBackend();
+refreshBackboneVisibility(); // live RIPEstat fetch, fire-and-forget — re-renders when it resolves
+refreshRadarBenchmark();     // live Cloudflare Radar fetch via Edge Function, fire-and-forget
+refreshIodaSignal();         // live IODA/CAIDA national connectivity fetch, no setup needed, fire-and-forget
+</script>
+</body>
+</html>
