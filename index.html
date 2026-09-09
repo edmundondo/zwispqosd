@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.1.1">
+<meta name="app-version" content="1.1.3">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -365,6 +365,20 @@
     .translate-form{grid-template-columns:1fr;}
   }
 
+  /* Narrow phones: .row-top packs rank+name+subs+qos-badge+pill+caret in one
+     flex row with several fixed-width children (~370px+ combined) that never
+     fit under a 320px viewport without this — let it wrap onto a second line
+     instead of forcing horizontal scroll. */
+  @media (max-width:480px){
+    .row-top{flex-wrap:wrap;row-gap:6px;}
+    .name-wrap{flex:1 1 100%;order:1;}
+    .rank{order:0;}
+    .subs{flex:0 0 auto;text-align:left;order:2;}
+    .qos-badge{flex:0 0 auto;text-align:left;order:3;}
+    .pill{order:4;}
+    .caret{order:5;}
+  }
+
   @media print{
     body{background:#fff;color:#111;padding:0;}
     .toolbar,.stats .stat:nth-child(n){display:none;}
@@ -601,7 +615,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.1.1 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.1.3 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -613,8 +627,18 @@
      download/upload/latency/jitter/packet-loss measurement entirely client-side against
      Cloudflare's public speedtest endpoints (the same infra behind speed.cloudflare.com). -->
 <script type="module">
-  import { SpeedTest } from "https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1/+esm";
-  window.__CFSpeedTest = SpeedTest;
+  // This import is a network fetch and is NOT synchronous with the classic <script> below —
+  // module scripts execute after the document is parsed, and the dynamic /+esm bundle can take
+  // anywhere from tens of ms to a few seconds to arrive (or fail outright if the CDN is
+  // unreachable or blocked by an extension). window.__CFSpeedTestReady lets other code AWAIT
+  // that outcome instead of racing it — see runAutoSpeedTest(), which used to just check
+  // `!window.__CFSpeedTest` at click time and, if the click came in before this promise settled,
+  // wrongly reported "not supported in this browser" (this was the real bug behind that message
+  // appearing identically in every browser: it's a load-timing/network issue, not a capability
+  // gap — every evergreen browser supports fetch/Promise/Worker).
+  window.__CFSpeedTestReady = import("https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1/+esm")
+    .then(mod => { window.__CFSpeedTest = mod.SpeedTest; return true; })
+    .catch(err => { console.warn("Cloudflare Speed Test library failed to load", err); return false; });
 </script>
 <script>
 /* =========================================================================
@@ -742,6 +766,8 @@ const I18N = {
     speed_auto_running: "Running speed test… please don't close this tab.",
     speed_auto_done: "Done — results filled in below. Review and submit.",
     speed_auto_unsupported: "Automatic testing isn't supported in this browser — enter your numbers manually below.",
+    speed_auto_loading: "Loading the speed test tool…",
+    speed_auto_load_failed: "Couldn't load the automatic speed test (network or ad-blocker issue) — enter your numbers manually below.",
     speed_auto_failed: "Couldn't complete the automatic test — enter your numbers manually below.",
     speed_method_auto: "Automatic",
     speed_method_manual: "Manual"
@@ -3088,8 +3114,20 @@ function speedTestSupported(){
 
 async function runAutoSpeedTest(rowEl, downInput, upInput, autoBtn, statusEl){
   if(!window.__CFSpeedTest){
-    if(statusEl) statusEl.textContent = t("speed_auto_unsupported");
-    return;
+    // Not loaded yet doesn't mean unsupported — the library import (see the <script type="module">
+    // above) is still an in-flight network fetch more often than not the first time someone clicks
+    // this soon after page load. Wait on window.__CFSpeedTestReady rather than assuming failure.
+    autoBtn.disabled = true;
+    if(statusEl) statusEl.textContent = t("speed_auto_loading");
+    const loaded = window.__CFSpeedTestReady ? await window.__CFSpeedTestReady : false;
+    autoBtn.disabled = false;
+    if(!loaded || !window.__CFSpeedTest){
+      // The import promise resolved false (or __CFSpeedTestReady doesn't exist at all, e.g. the
+      // module script itself was blocked) — this is a genuine load failure, not a browser
+      // capability gap, so it gets its own message rather than reusing speed_auto_unsupported.
+      if(statusEl) statusEl.textContent = t("speed_auto_load_failed");
+      return;
+    }
   }
   autoBtn.disabled = true;
   if(statusEl) statusEl.textContent = t("speed_auto_running");
