@@ -7,6 +7,21 @@ All notable changes to the Zimbabwe ISP Tracker are recorded here. Format follow
 The version number shown here matches the `<meta name="app-version">` tag in `index.html`
 and the `v{version}` badge in each page's footer.
 
+## [1.1.4] — 2026-09-09
+
+### Fixed
+- The v1.1.3 fix improved the *messaging* around automatic-speed-test failures but didn't fix an
+  underlying bug that had been there since v1.1.0: the CDN import used
+  `import { SpeedTest } from ".../+esm"`, but jsDelivr's `/+esm` transform for this package exports
+  the class as the module's `default` export, not a named `SpeedTest` export — confirmed live by
+  checking `Object.keys(mod)`, which is just `["default"]`. The named import was always `undefined`,
+  so `window.__CFSpeedTest` never actually got set even when the network fetch itself succeeded
+  perfectly, and every real click landed on "Couldn't load the automatic speed test (network or
+  ad-blocker issue)" — a real, accurate-sounding error message pointing at completely the wrong
+  cause. Now accepts either `mod.default` or `mod.SpeedTest`, and treats a missing class as a
+  genuine failure rather than a false success. Verified live against the real jsDelivr CDN
+  (instantiated the corrected class successfully; did not run a full test to avoid using data).
+
 ## [1.1.3] — 2026-09-09
 
 ### Fixed

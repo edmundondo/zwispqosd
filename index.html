@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.1.3">
+<meta name="app-version" content="1.1.4">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -615,7 +615,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.1.3 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.1.4 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -637,7 +637,19 @@
   // appearing identically in every browser: it's a load-timing/network issue, not a capability
   // gap — every evergreen browser supports fetch/Promise/Worker).
   window.__CFSpeedTestReady = import("https://cdn.jsdelivr.net/npm/@cloudflare/speedtest@1/+esm")
-    .then(mod => { window.__CFSpeedTest = mod.SpeedTest; return true; })
+    .then(mod => {
+      // jsDelivr's /+esm transform for this package exports the SpeedTest class as the default
+      // export, not a named `SpeedTest` export (confirmed live 2026-09-09: Object.keys(mod) was
+      // just ["default"]). The original code imported { SpeedTest } — always undefined — so the
+      // import "succeeded" but window.__CFSpeedTest was silently never actually set, and every
+      // real click fell into the load-failed message despite there being no real network/CDN
+      // problem at all. Accept either export shape, and treat a missing class as a genuine
+      // failure (not a false success) so window.__CFSpeedTestReady stays trustworthy.
+      const SpeedTestClass = mod.default || mod.SpeedTest;
+      if (typeof SpeedTestClass !== "function") throw new Error("SpeedTest export not found on @cloudflare/speedtest module");
+      window.__CFSpeedTest = SpeedTestClass;
+      return true;
+    })
     .catch(err => { console.warn("Cloudflare Speed Test library failed to load", err); return false; });
 </script>
 <script>
