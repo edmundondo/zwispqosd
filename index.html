@@ -671,6 +671,154 @@ if (BACKEND_CONFIGURED && window.supabase) {
 }
 
 /* =========================================================================
+   SPAM GUARD — free, open-source, no third-party service or signup needed.
+   Layered client-side defenses against bot/fake submissions (ratings,
+   status reports, speed tests, conversion reports, translation suggestions,
+   feedback). This is the FIRST line of defense only: anyone can bypass
+   client-side JS entirely and call the Supabase REST API directly with the
+   public anon key, so the real backstop lives in Postgres — see
+   supabase-antispam-migration.sql (RLS + CHECK constraints + a per-device
+   rate-limit trigger). Keep both layers; this one exists to give honest
+   users instant feedback and to cut casual/naive abuse before it ever
+   reaches the network.
+   ========================================================================= */
+const SpamGuard = (function(){
+  const DEVICE_KEY = "zw_isp_device_id";
+  const LOG_KEY = "zw_isp_submit_log";
+  const PAGE_LOAD_TS = Date.now();
+
+  // Stable-but-anonymous per-browser id, used for client-side rate limiting
+  // AND sent along with each submission so the server-side trigger can rate
+  // limit too. This is not identity — no PII, just a random token — and a
+  // determined bad actor can reset it by clearing site data, which is why
+  // it's a rate-limiting aid, not the only defense.
+  function deviceId(){
+    try{
+      let id = localStorage.getItem(DEVICE_KEY);
+      if(!id){
+        id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+          : "dev-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+        localStorage.setItem(DEVICE_KEY, id);
+      }
+      return id;
+    }catch(e){ return "no-storage-" + Math.random().toString(36).slice(2); }
+  }
+
+  function readLog(){
+    try{ return JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); }
+    catch(e){ return []; }
+  }
+  function writeLog(log){
+    try{ localStorage.setItem(LOG_KEY, JSON.stringify(log.slice(-200))); }catch(e){}
+  }
+
+  const LIMITS = {
+    perMinute: 3,      // across ALL submission types combined, this browser
+    perHour: 15,
+    perDay: 40,
+    cooldownMs: 4000   // minimum gap between any two submissions
+  };
+
+  // Basic spam-content signals: links/promo text have no legitimate reason
+  // to appear in a QoS comment. Not a full profanity filter — just the
+  // patterns that show up in scripted spam.
+  const SPAM_PATTERNS = [
+    /https?:\/\//i, /www\./i, /\[url=/i, /<\s*script/i,
+    /\b(viagra|cialis|casino|crypto\s*airdrop|forex\s*signals|make\s*money\s*fast|only\s*fans|onlyfans)\b/i
+  ];
+
+  function withinRate(){
+    const now = Date.now();
+    const log = readLog();
+    const last = log[log.length - 1];
+    if(last && (now - last) < LIMITS.cooldownMs) return { ok:false, reason:"too_fast" };
+    if(log.filter(t => now - t < 60*1000).length >= LIMITS.perMinute) return { ok:false, reason:"rate_minute" };
+    if(log.filter(t => now - t < 60*60*1000).length >= LIMITS.perHour) return { ok:false, reason:"rate_hour" };
+    if(log.filter(t => now - t < 24*60*60*1000).length >= LIMITS.perDay) return { ok:false, reason:"rate_day" };
+    return { ok:true };
+  }
+  function recordSubmit(){
+    const log = readLog();
+    log.push(Date.now());
+    writeLog(log);
+  }
+
+  function sanitizeText(str, maxLen){
+    let s = (str == null ? "" : String(str)).trim();
+    if(s.length > maxLen) s = s.slice(0, maxLen);
+    return s;
+  }
+  function looksLikeSpam(str){
+    if(!str) return false;
+    return SPAM_PATTERNS.some(re => re.test(str));
+  }
+
+  // Global honeypot field: invisible to sighted users and announced as
+  // hidden to screen readers, but present in the DOM so form-filling bots
+  // (which typically fill every input they can find, not just ones humans
+  // see) populate it. Any value in it at submit time means a bot touched
+  // the page, since no legitimate UI code ever writes to it.
+  let honeypotEl = null;
+  function ensureHoneypot(){
+    if(honeypotEl) return honeypotEl;
+    honeypotEl = document.createElement("input");
+    honeypotEl.type = "text";
+    honeypotEl.name = "website";
+    honeypotEl.autocomplete = "off";
+    honeypotEl.tabIndex = -1;
+    honeypotEl.setAttribute("aria-hidden", "true");
+    honeypotEl.style.cssText = "position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(honeypotEl);
+    return honeypotEl;
+  }
+  try{ ensureHoneypot(); }catch(e){ /* DOM not ready yet in some load orders */ }
+
+  let toastEl = null;
+  function toast(msg){
+    try{
+      if(!toastEl){
+        toastEl = document.createElement("div");
+        toastEl.style.cssText = "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);"
+          + "background:#2b2438;color:#f2ede4;border:1px solid #3a3149;border-radius:10px;"
+          + "padding:10px 16px;font-size:13px;max-width:90vw;z-index:99999;box-shadow:0 4px 18px rgba(0,0,0,.35);";
+        document.body.appendChild(toastEl);
+      }
+      toastEl.textContent = msg;
+      toastEl.style.display = "block";
+      clearTimeout(toastEl._hideTimer);
+      toastEl._hideTimer = setTimeout(()=>{ toastEl.style.display = "none"; }, 3800);
+    }catch(e){ console.warn(msg); }
+  }
+
+  // Call before any insert. actionLabel is just for logging; commentText is
+  // whatever free-text field that submission carries (or "" if none).
+  function check(actionLabel, commentText){
+    if(!honeypotEl) ensureHoneypot();
+    if(honeypotEl && honeypotEl.value){
+      console.warn("SpamGuard: honeypot triggered on", actionLabel);
+      toast("Couldn't submit that — please try again.");
+      return { ok:false };
+    }
+    if(Date.now() - PAGE_LOAD_TS < 1500){
+      toast("Please take a moment before submitting.");
+      return { ok:false };
+    }
+    if(!withinRate().ok){
+      toast("You're submitting a lot in a short time — please slow down and try again shortly.");
+      return { ok:false };
+    }
+    if(looksLikeSpam(commentText)){
+      toast("That comment looks like spam (links/promo text aren't allowed) — please rephrase.");
+      return { ok:false };
+    }
+    return { ok:true };
+  }
+  function pass(){ recordSubmit(); }
+
+  return { deviceId, sanitizeText, check, pass };
+})();
+
+/* =========================================================================
    i18n — UI chrome only. ISP names, POTRAZ notes and statistics are kept in
    English everywhere (translating regulatory/statistical text risks
    introducing errors, and isn't something a crowdsourced review pass can
@@ -2243,6 +2391,9 @@ async function initBackend(){
 }
 
 async function submitReport(report){
+  if(!SpamGuard.check("rating", report.comment).ok) return;
+  report.comment = SpamGuard.sanitizeText(report.comment, 500);
+  SpamGuard.pass();
   REPORTS.push(report);
   saveLocalReports(REPORTS);
   openRows.add(report.isp);
@@ -2251,7 +2402,8 @@ async function submitReport(report){
     try{
       const { error } = await supa.from("qos_reports").insert([{
         site: SITE_ID,
-        isp: report.isp, stars: report.stars, city: report.city, comment: report.comment
+        isp: report.isp, stars: report.stars, city: report.city, comment: report.comment,
+        device_id: SpamGuard.deviceId()
       }]);
       if(error) throw error;
     }catch(e){
@@ -2268,14 +2420,19 @@ async function submitFeedback(){
     status.textContent = "Feedback needs the shared backend to be configured — nothing to send yet.";
     return;
   }
+  const rawComment = document.getElementById("fbComment").value || "";
+  const guard = SpamGuard.check("feedback", rawComment);
+  if(!guard.ok) return;
   const payload = {
     site: SITE_ID,
     location_correct: document.getElementById("fbLocation").value,
     usability: document.getElementById("fbUsability").value,
     language_ok: document.getElementById("fbLanguage").value,
-    comment: (document.getElementById("fbComment").value || "").trim().slice(0,1000),
-    city: (document.getElementById("fbCity").value || "").trim().slice(0,60)
+    comment: SpamGuard.sanitizeText(rawComment, 1000),
+    city: SpamGuard.sanitizeText(document.getElementById("fbCity").value, 60),
+    device_id: SpamGuard.deviceId()
   };
+  SpamGuard.pass();
   btn.disabled = true;
   status.textContent = "Sending…";
   try{
@@ -2293,6 +2450,9 @@ async function submitFeedback(){
 }
 
 async function submitStatus(entry){
+  if(!SpamGuard.check("status", entry.comment).ok) return;
+  entry.comment = SpamGuard.sanitizeText(entry.comment, 500);
+  SpamGuard.pass();
   STATUS_REPORTS.push(entry);
   saveLocalStatus(STATUS_REPORTS);
   openRows.add(entry.isp);
@@ -2301,7 +2461,8 @@ async function submitStatus(entry){
     try{
       const { error } = await supa.from("status_reports").insert([{
         site: SITE_ID,
-        isp: entry.isp, city: entry.city, status: entry.status, comment: entry.comment
+        isp: entry.isp, city: entry.city, status: entry.status, comment: entry.comment,
+        device_id: SpamGuard.deviceId()
       }]);
       if(error) throw error;
     }catch(e){
@@ -2312,6 +2473,9 @@ async function submitStatus(entry){
 }
 
 async function submitSpeed(entry){
+  if(!SpamGuard.check("speed", entry.comment).ok) return;
+  entry.comment = SpamGuard.sanitizeText(entry.comment, 500);
+  SpamGuard.pass();
   SPEED_REPORTS.push(entry);
   saveLocalSpeed(SPEED_REPORTS);
   openRows.add(entry.isp);
@@ -2319,7 +2483,8 @@ async function submitSpeed(entry){
   if(supa){
     const baseRow = {
       site: SITE_ID,
-      isp: entry.isp, city: entry.city, download_mbps: entry.download_mbps, upload_mbps: entry.upload_mbps, comment: entry.comment
+      isp: entry.isp, city: entry.city, download_mbps: entry.download_mbps, upload_mbps: entry.upload_mbps, comment: entry.comment,
+      device_id: SpamGuard.deviceId()
     };
     // Richer columns from the built-in automatic speed test (v1.1.0+). If the
     // speed_reports table hasn't been migrated to add these columns yet, the first
@@ -2354,6 +2519,9 @@ async function submitSpeed(entry){
 }
 
 async function submitConversion(entry){
+  if(!SpamGuard.check("conversion", entry.comment).ok) return;
+  entry.comment = SpamGuard.sanitizeText(entry.comment, 500);
+  SpamGuard.pass();
   CONVERSIONS.push(entry);
   saveLocalConversions(CONVERSIONS);
   renderAll();
@@ -2361,7 +2529,8 @@ async function submitConversion(entry){
     try{
       const { error } = await supa.from("conversions").insert([{
         site: SITE_ID,
-        to_isp: entry.to_isp, from_isp: entry.from_isp, reasons: entry.reasons, city: entry.city, comment: entry.comment
+        to_isp: entry.to_isp, from_isp: entry.from_isp, reasons: entry.reasons, city: entry.city, comment: entry.comment,
+        device_id: SpamGuard.deviceId()
       }]);
       if(error) throw error;
     }catch(e){
@@ -2371,6 +2540,10 @@ async function submitConversion(entry){
 }
 
 async function submitTranslation(sugg){
+  if(!SpamGuard.check("translation", (sugg.suggested_text||"") + " " + (sugg.source_note||"")).ok) return;
+  sugg.suggested_text = SpamGuard.sanitizeText(sugg.suggested_text, 500);
+  sugg.source_note = SpamGuard.sanitizeText(sugg.source_note, 200);
+  SpamGuard.pass();
   sugg.id = sugg.id || ("local-"+Date.now()+"-"+Math.random().toString(36).slice(2));
   sugg.endorsements = 0; sugg.status = "pending"; sugg.ts = Date.now();
   TRANSLATIONS.push(sugg);
@@ -2380,7 +2553,8 @@ async function submitTranslation(sugg){
     try{
       const { data, error } = await supa.from("translations").insert([{
         site: SITE_ID,
-        lang: sugg.lang, string_key: sugg.string_key, suggested_text: sugg.suggested_text, source_note: sugg.source_note
+        lang: sugg.lang, string_key: sugg.string_key, suggested_text: sugg.suggested_text, source_note: sugg.source_note,
+        device_id: SpamGuard.deviceId()
       }]).select();
       if(error) throw error;
       if(data && data[0]){ sugg.id = data[0].id; saveLocalTranslations(TRANSLATIONS); }
