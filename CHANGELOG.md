@@ -7,6 +7,32 @@ All notable changes to the Zimbabwe ISP Tracker are recorded here. Format follow
 The version number shown here matches the `<meta name="app-version">` tag in `index.html`
 and the `v{version}` badge in each page's footer.
 
+## [1.1.3] — 2026-09-09
+
+### Fixed
+- Investigated a report that the automatic speed test's "Automatic testing isn't supported in
+  this browser" message was appearing identically in Chrome, Edge, Firefox, and Brave — all four
+  fully support the `fetch`/`Promise`/`Worker` APIs the code checks for, which ruled out an actual
+  capability gap. The real cause: `runAutoSpeedTest()` treated `!window.__CFSpeedTest` at click
+  time as "this browser can't do it," but `window.__CFSpeedTest` is only set once the
+  `@cloudflare/speedtest` library finishes an async CDN import (a `<script type="module">` fetch
+  that isn't synchronized with the rest of the page's script at all) — so any click that landed
+  before that fetch resolved, or any click when the fetch failed outright (CDN blocked, offline,
+  ad-blocker), hit the same wrong, misleading "not supported" text regardless of browser.
+  `runAutoSpeedTest()` now awaits a `window.__CFSpeedTestReady` promise the module script exposes,
+  showing a distinct "Loading the speed test tool…" state while the import is in flight and a
+  distinct "Couldn't load the automatic speed test (network or ad-blocker issue)" message only if
+  it genuinely fails.
+
+## [1.1.2] — 2026-09-01
+
+### Fixed
+- `.row-top` (the rank/name/subscriber-count/QoS-badge/status-pill/caret strip on each provider row
+  in `index.html`) was a `flex-nowrap` row with several fixed-width children totaling ~370px+ —
+  it never fit under a 320px viewport, forcing horizontal scroll on small phones. Added a
+  `@media (max-width:480px)` rule that lets `.row-top` wrap: name takes the full first line,
+  subscriber count / QoS badge / status pill / caret wrap to a second line, left-aligned.
+
 ## [1.1.1] — 2026-08-24
 
 ### Changed
