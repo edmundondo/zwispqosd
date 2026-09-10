@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.1.4">
+<meta name="app-version" content="1.2.0">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -511,12 +511,9 @@
     <div class="chip" data-filter="Mobile"><span id="filterMobileLabel">Mobile</span></div>
     <div class="chip" data-filter="Fixed/Wireless"><span id="filterFixedLabel">Fixed &amp; Wireless</span></div>
     <div class="spacer"></div>
-    <div class="btn" id="exportPdf">🖨️ <span id="btnExportPdfLabel">Export PDF Report</span></div>
-    <div class="btn" id="exportCsv">📊 <span id="btnExportCsvLabel">Export ISP CSV</span></div>
-    <div class="btn" id="exportQos">⭐ <span id="btnExportQosLabel">Export QoS CSV</span></div>
-    <div class="btn" id="exportStatus">🚦 <span id="btnExportStatusLabel">Export Status CSV</span></div>
-    <div class="btn" id="exportSpeed">📶 <span id="btnExportSpeedLabel">Export Speed CSV</span></div>
-    <div class="btn" id="exportEpub">📚 <span id="btnExportEpubLabel">Export EPUB</span></div>
+    <!-- Export options (PDF/CSV/EPUB) moved to the privileged zwispqosp admin app in v1.2.0 —
+         they now pull full history from Supabase instead of this page's capped 1000-row
+         client cache. See zwispqosp's Export tab. -->
   </div>
 
   <div class="list" id="list"></div>
@@ -615,12 +612,10 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.1.4 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.2.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
-<!-- JSZip — free, open-source (MIT), used client-side to build the EPUB export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <!-- Supabase JS client — free, open-source (Apache-2.0), loaded from jsDelivr CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Cloudflare Speed Test — free, open-source (BSD-3-Clause), no signup/API key; runs the
@@ -849,10 +844,6 @@ const I18N = {
     filter_all: "All",
     filter_mobile: "Mobile",
     filter_fixed: "Fixed & Wireless",
-    btn_export_pdf: "Export PDF Report",
-    btn_export_csv: "Export ISP CSV",
-    btn_export_qos: "Export QoS CSV",
-    btn_export_epub: "Export EPUB",
     qos_title: "Quality of Service — crowdsourced",
     btn_rate: "Rate this ISP",
     your_rating: "Your rating",
@@ -891,13 +882,11 @@ const I18N = {
     status_down_long: "Down 24h+",
     no_status_yet: "No status reports yet — be the first to report.",
     btn_submit_status: "Submit status",
-    btn_export_status: "Export Status CSV",
     bandwidth_title: "Bandwidth Speeds — 24h rolling, crowdsourced",
     report_speed: "Report a speed test",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Submit speed test",
-    btn_export_speed: "Export Speed CSV",
     no_speed_data: "No speed tests reported in the last 24 hours",
     no_speed_reports_yet: "No speed tests reported yet — be the first.",
     speed_ranking_title: "Bandwidth Speeds — ranked, 24h rolling average",
@@ -943,10 +932,6 @@ const I18N = {
     filter_all: "Zvose",
     filter_mobile: "Foni",
     filter_fixed: "Yakabatana & Isina Waya",
-    btn_export_pdf: "Budisa Report yePDF",
-    btn_export_csv: "Budisa CSV yeVapi",
-    btn_export_qos: "Budisa CSV yeQoS",
-    btn_export_epub: "Budisa EPUB",
     qos_title: "Hunhu Hwebasa — hunobva kuvanhu",
     btn_rate: "Ipa Mavara Kune Uyu Mupi",
     your_rating: "Mavara Ako",
@@ -985,13 +970,11 @@ const I18N = {
     status_down_long: "Hachishandi Kwenguva Refu (24h+)",
     no_status_yet: "Hapana chimiro chakashumwa parizvino — iva wekutanga kushuma.",
     btn_submit_status: "Tumira Chimiro",
-    btn_export_status: "Budisa CSV yeChimiro",
     bandwidth_title: "Kukurumidza kwe-Network — maawa 24 apfuura, kubva kuvanhu",
     report_speed: "Shuma Bvunzo yeSpeed",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Tumira Bvunzo yeSpeed",
-    btn_export_speed: "Budisa CSV yeSpeed",
     no_speed_data: "Hapana bvunzo dzespeed dzashumwa mumaawa 24 apfuura",
     no_speed_reports_yet: "Hapana bvunzo dzespeed dzashumwa parizvino — iva wekutanga.",
     speed_ranking_title: "Kukurumidza kwe-Network — kurongwa, maawa 24",
@@ -1012,10 +995,6 @@ const I18N = {
     filter_all: "Konke",
     filter_mobile: "Iselula",
     filter_fixed: "Okumisiweyo & Ngaphandle Kwentambo",
-    btn_export_pdf: "Khuphela Umbiko we-PDF",
-    btn_export_csv: "Khuphela i-CSV Yabahlinzeki",
-    btn_export_qos: "Khuphela i-CSV ye-QoS",
-    btn_export_epub: "Khuphela i-EPUB",
     qos_title: "Izinga Lomsebenzi — livela ebantwini",
     btn_rate: "Nika Amanqaku Lo Mhlinzeki",
     your_rating: "Amanqaku Akho",
@@ -1054,13 +1033,11 @@ const I18N = {
     status_down_long: "Ayisebenzi Isikhathi Eside (24h+)",
     no_status_yet: "Akukho zimo ezibikiwe okwamanje — yiba ngowokuqala ukubika.",
     btn_submit_status: "Thumela Isimo",
-    btn_export_status: "Khuphela i-CSV yesimo",
     bandwidth_title: "Ijubane Lenethiwekhi — amahora angu-24 edlulileyo, sivela ebantwini",
     report_speed: "Bika Ukuhlolwa Kwejubane",
     download_label: "Ukudawuniloda (Mbps)",
     upload_label: "Ukulayisha (Mbps)",
     btn_submit_speed: "Thumela Ukuhlolwa Kwejubane",
-    btn_export_speed: "Khuphela i-CSV Yejubane",
     no_speed_data: "Akukho kuhlolwa kwejubane okubikiwe emahoreni angu-24 edlulileyo",
     no_speed_reports_yet: "Akukho kuhlolwa kwejubane okubikiwe okwamanje — yiba ngowokuqala.",
     speed_ranking_title: "Ijubane Lenethiwekhi — ngokulandelana, amahora angu-24",
@@ -1081,10 +1058,6 @@ const I18N = {
     filter_all: "Zvose",
     filter_mobile: "Foni",
     filter_fixed: "Yakabhatana & isina waya",
-    btn_export_pdf: "Bhudisa Ripoti ye PDF",
-    btn_export_csv: "Bhudisa CSV ye Vapi",
-    btn_export_qos: "Bhudisa CSV ye QoS",
-    btn_export_epub: "Bhudisa EPUB",
     qos_title: "Hunhu hwe Basa — unobva kuvanhu",
     btn_rate: "Nyika mupi uyu maratingi",
     your_rating: "Maratingi ako",
@@ -1123,13 +1096,11 @@ const I18N = {
     status_down_long: "Hairi kushanda kwenguva refu (24h+)",
     no_status_yet: "Hakuna mamiriro akarehwa zvino — iva wekutanga kureva.",
     btn_submit_status: "Tumira Mamiriro",
-    btn_export_status: "Bhudisa CSV ye Mamiriro",
     bandwidth_title: "Rubvilo rwe Network — maawa 24 apfuura, anobva kuvanhu",
     report_speed: "Reva kuedza kwerubvilo",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Tumira Kuedza Kwerubvilo",
-    btn_export_speed: "Bhudisa CSV yerubvilo",
     no_speed_data: "Hakuna kuedza kwerubvilo kwakarehwa mumaawa 24 apfuura",
     no_speed_reports_yet: "Hakuna kuedza kwerubvilo kwakarehwa zvino — iva wekutanga.",
     speed_ranking_title: "Rubvilo rwe Network — rwakarongwa, maawa 24",
@@ -1150,10 +1121,6 @@ const I18N = {
     filter_all: "Zonse",
     filter_mobile: "Foni",
     filter_fixed: "Yolumikizidwa & Yopanda Waya",
-    btn_export_pdf: "Tulutsani Lipoti ya PDF",
-    btn_export_csv: "Tulutsani CSV ya Opereka",
-    btn_export_qos: "Tulutsani CSV ya QoS",
-    btn_export_epub: "Tulutsani EPUB",
     qos_title: "Ubwino wa Ntchito — wochokera kwa anthu",
     btn_rate: "Perekani mfundo kwa opereka uyu",
     your_rating: "Mfundo zanu",
@@ -1192,13 +1159,11 @@ const I18N = {
     status_down_long: "Sikugwira ntchito kwa nthawi yaitali (24h+)",
     no_status_yet: "Palibe mkhalidwe wonenedwa pakadali pano — khalani woyamba kunena.",
     btn_submit_status: "Tumizani Mkhalidwe",
-    btn_export_status: "Tulutsani CSV ya Mkhalidwe",
     bandwidth_title: "Liwiro la Netiweki — maola 24 apitawa, ochokera kwa anthu",
     report_speed: "Nenani kuyesa kwa liwiro",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Tumizani Kuyesa kwa Liwiro",
-    btn_export_speed: "Tulutsani CSV ya Liwiro",
     no_speed_data: "Palibe kuyesa kwa liwiro kwanenedwa mu maola 24 apitawa",
     no_speed_reports_yet: "Palibe kuyesa kwa liwiro kwanenedwa pakadali pano — khalani woyamba.",
     speed_ranking_title: "Liwiro la Netiweki — lolamulidwa, maola 24",
@@ -1223,10 +1188,6 @@ const I18N = {
     filter_all: "Hinkwaswo",
     filter_mobile: "Foni",
     filter_fixed: "Leyi hlanganisiweke & Ku hava tinguvu",
-    btn_export_pdf: "Humesa Riphothi ra PDF",
-    btn_export_csv: "Humesa CSV ya Vaphakeri",
-    btn_export_qos: "Humesa CSV ya QoS",
-    btn_export_epub: "Humesa EPUB",
     qos_title: "Ntiyiso wa Ntirho — lowu humaka eka vanhu",
     btn_rate: "Nyika muphakeri loyi mavondzo",
     your_rating: "Mavondzo ya wena",
@@ -1265,13 +1226,11 @@ const I18N = {
     status_down_long: "A yi tirhi nkarhi wo leha (24h+)",
     no_status_yet: "A ku na swiyimo leswi vikiweke sweswi — va wo sungula ku vika.",
     btn_submit_status: "Rhumela Xiyimo",
-    btn_export_status: "Humesa CSV ya Xiyimo",
     bandwidth_title: "Rivilo ra Network — tiawara ta 24 leti hundzeke, leti humaka eka vanhu",
     report_speed: "Vika ndzingo wa rivilo",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Rhumela Ndzingo wa Rivilo",
-    btn_export_speed: "Humesa CSV ya Rivilo",
     no_speed_data: "A ku na tindzingo ta rivilo leti vikiweke eka tiawara ta 24 leti hundzeke",
     no_speed_reports_yet: "A ku na tindzingo ta rivilo leti vikiweke sweswi — va wo sungula.",
     speed_ranking_title: "Rivilo ra Network — leri hlawuriweke, tiawara ta 24",
@@ -1292,10 +1251,6 @@ const I18N = {
     filter_all: "Tsohle",
     filter_mobile: "Founu",
     filter_fixed: "E hokahantsweng & Ntle ho terata",
-    btn_export_pdf: "Ntsha Tlaleho ya PDF",
-    btn_export_csv: "Ntsha CSV ya Babaki",
-    btn_export_qos: "Ntsha CSV ya QoS",
-    btn_export_epub: "Ntsha EPUB",
     qos_title: "Boleng ba Tshebeletso — bo tswang ho batho",
     btn_rate: "Fana ka maemo ho mofani enwa",
     your_rating: "Maemo a hao",
@@ -1334,13 +1289,11 @@ const I18N = {
     status_down_long: "Ha e sebetse nako e telele (24h+)",
     no_status_yet: "Ha ho na boemo bo tlalehilweng hajwale — eba wa pele ho tlaleha.",
     btn_submit_status: "Romela Boemo",
-    btn_export_status: "Ntsha CSV ya Boemo",
     bandwidth_title: "Lebelo la Network — dihora tse 24 tse fetileng, tse tswang ho batho",
     report_speed: "Tlaleha teko ya lebelo",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Romela Teko ya Lebelo",
-    btn_export_speed: "Ntsha CSV ya Lebelo",
     no_speed_data: "Ha ho na diteko tsa lebelo tse tlalehilweng dihoreng tse 24 tse fetileng",
     no_speed_reports_yet: "Ha ho na diteko tsa lebelo tse tlalehilweng hajwale — eba wa pele.",
     speed_ranking_title: "Lebelo la Network — le hlophisitsweng, dihora tse 24",
@@ -1361,10 +1314,6 @@ const I18N = {
     filter_all: "Zyoonse",
     filter_mobile: "Foni",
     filter_fixed: "Zyaanzene & Zitakwe intambo",
-    btn_export_pdf: "Amutumine Lipoti lya PDF",
-    btn_export_csv: "Amutumine CSV ya Bapi",
-    btn_export_qos: "Amutumine CSV ya QoS",
-    btn_export_epub: "Amutumine EPUB",
     qos_title: "Bubotu bwaMulimo — buzwa kubantu",
     btn_rate: "Amupe mupi ooyu ntenda",
     your_rating: "Ntenda yako",
@@ -1403,13 +1352,11 @@ const I18N = {
     status_down_long: "Taubeleki kwachiindi chilamfu (24h+)",
     no_status_yet: "Taakwe bukkale bwakaambwa lino — amube wakusaanguna kwaamba.",
     btn_submit_status: "Amutumizye Bukkale",
-    btn_export_status: "Amutumine CSV ya Bukkale",
     bandwidth_title: "Lubilo lwaNethiwekki — mawoola aali 24 aainda, azwa kubantu",
     report_speed: "Amwaambe kusunka kwalubilo",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Amutumizye Kusunka Kwalubilo",
-    btn_export_speed: "Amutumine CSV yalubilo",
     no_speed_data: "Taakwe kusunka kwalubilo kwakaambwa mumawoola aali 24 aainda",
     no_speed_reports_yet: "Taakwe kusunka kwalubilo kwakaambwa lino — amube wakusaanguna.",
     speed_ranking_title: "Lubilo lwaNethiwekki — lwabikkwa mumulongo, mawoola aali 24",
@@ -1430,10 +1377,6 @@ const I18N = {
     filter_all: "Tsotlhe",
     filter_mobile: "Founu",
     filter_fixed: "E golagantsweng le e sena thapo",
-    btn_export_pdf: "Ntsha Pego ya PDF",
-    btn_export_csv: "Ntsha CSV ya Batlamedi",
-    btn_export_qos: "Ntsha CSV ya QoS",
-    btn_export_epub: "Ntsha EPUB",
     qos_title: "Boleng jwa Tirelo — bo tswa mo bathong",
     btn_rate: "Naya Motlamedi ono maduo",
     your_rating: "Maduo a gago",
@@ -1472,13 +1415,11 @@ const I18N = {
     status_down_long: "Ga e dire dinako tse di telele (24h+)",
     no_status_yet: "Ga go na maemo a a begilweng jaanong — nna wa ntlha go bega.",
     btn_submit_status: "Romela Maemo",
-    btn_export_status: "Ntsha CSV ya Maemo",
     bandwidth_title: "Lobelo lwa Network — diura tse 24 tse di fetileng, go tswa mo bathong",
     report_speed: "Bega teko ya lobelo",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Romela Teko ya Lobelo",
-    btn_export_speed: "Ntsha CSV ya Lobelo",
     no_speed_data: "Ga go na diteko tsa lobelo tse di begilweng mo diureng tse 24 tse di fetileng",
     no_speed_reports_yet: "Ga go na diteko tsa lobelo tse di begilweng jaanong — nna wa ntlha.",
     speed_ranking_title: "Lobelo lwa Network — go rulaganngwa, diura tse 24",
@@ -1499,10 +1440,6 @@ const I18N = {
     filter_all: "Zwoṱhe",
     filter_mobile: "Founi",
     filter_fixed: "Yo vhofhaho & Hu si na tambo",
-    btn_export_pdf: "Bveisani Muvhigo wa PDF",
-    btn_export_csv: "Bveisani CSV ya Vhaḽisi",
-    btn_export_qos: "Bveisani CSV ya QoS",
-    btn_export_epub: "Bveisani EPUB",
     qos_title: "Vhuḓi ha Tshumelo — u bva kha vhathu",
     btn_rate: "Ṋeani muḽisi hoyu maṱoso",
     your_rating: "Maṱoso au",
@@ -1541,13 +1478,11 @@ const I18N = {
     status_down_long: "A i shumi tshifhinga tshilapfu (24h+)",
     no_status_yet: "A hu na vhuimo ho vhigwaho zwazwino — ivhani wa u thoma u vhiga.",
     btn_submit_status: "Rumelani Vhuimo",
-    btn_export_status: "Bveisani CSV ya Vhuimo",
     bandwidth_title: "Luvhilo lwa Nethiwekhe — awara dza 24 dzo fhiraho, dzi bvaho kha vhathu",
     report_speed: "Vhigani mulingo wa luvhilo",
     download_label: "Download (Mbps)",
     upload_label: "Upload (Mbps)",
     btn_submit_speed: "Rumelani Mulingo wa Luvhilo",
-    btn_export_speed: "Bveisani CSV ya Luvhilo",
     no_speed_data: "A hu na milingo ya luvhilo yo vhigwaho kha awara dza 24 dzo fhiraho",
     no_speed_reports_yet: "A hu na milingo ya luvhilo yo vhigwaho zwazwino — ivhani wa u thoma.",
     speed_ranking_title: "Luvhilo lwa Nethiwekhe — lwo rongwaho, awara dza 24",
@@ -1568,10 +1503,6 @@ const I18N = {
     filter_all: "Konke",
     filter_mobile: "Iselula",
     filter_fixed: "Ezimiselweyo & Ezingenantambo",
-    btn_export_pdf: "Khupha Ingxelo ye-PDF",
-    btn_export_csv: "Khupha i-CSV yaBaboneleli",
-    btn_export_qos: "Khupha i-CSV ye-QoS",
-    btn_export_epub: "Khupha i-EPUB",
     qos_title: "Umgangatho weNkonzo — ovela ebantwini",
     btn_rate: "Nika lo mboneleli amanqaku",
     your_rating: "Amanqaku akho",
@@ -1610,13 +1541,11 @@ const I18N = {
     status_down_long: "Ayisebenzi ixesha elide (24h+)",
     no_status_yet: "Akukho meko ixeliweyo okwangoku — yiba ngowokuqala ukuxela.",
     btn_submit_status: "Thumela Imeko",
-    btn_export_status: "Khupha i-CSV yeMeko",
     bandwidth_title: "Isantya soMthungelwano — iiyure ezingu-24 ezidlulileyo, ezivela ebantwini",
     report_speed: "Xela uvavanyo lwesantya",
     download_label: "Ukukhuphela (Mbps)",
     upload_label: "Ukulayisha (Mbps)",
     btn_submit_speed: "Thumela Uvavanyo lwesAntya",
-    btn_export_speed: "Khupha i-CSV yesAntya",
     no_speed_data: "Akukho luvavanyo lwesantya lwexeliweyo kwiiyure ezingu-24 ezidlulileyo",
     no_speed_reports_yet: "Akukho luvavanyo lwesantya lwexeliweyo okwangoku — yiba ngowokuqala.",
     speed_ranking_title: "Isantya soMthungelwano — olucwangcisiweyo, iiyure ezingu-24",
@@ -2607,16 +2536,10 @@ function applyStaticTranslations(){
   document.getElementById("filterAllLabel").textContent = t("filter_all");
   document.getElementById("filterMobileLabel").textContent = t("filter_mobile");
   document.getElementById("filterFixedLabel").textContent = t("filter_fixed");
-  document.getElementById("btnExportPdfLabel").textContent = t("btn_export_pdf");
-  document.getElementById("btnExportCsvLabel").textContent = t("btn_export_csv");
-  document.getElementById("btnExportQosLabel").textContent = t("btn_export_qos");
-  document.getElementById("btnExportEpubLabel").textContent = t("btn_export_epub");
-  document.getElementById("btnExportStatusLabel").textContent = t("btn_export_status");
   document.getElementById("legendLiveLabel").textContent = t("status_live");
   document.getElementById("legendPartialLabel").textContent = t("status_partial");
   document.getElementById("legendDownLabel").textContent = t("status_down");
   document.getElementById("legendDownLongLabel").textContent = t("status_down_long");
-  document.getElementById("btnExportSpeedLabel").textContent = t("btn_export_speed");
   document.getElementById("speedTitleText").textContent = t("speed_ranking_title");
   document.getElementById("speedSubText").textContent = t("speed_ranking_sub");
   document.getElementById("impactTitleText").textContent = t("impact_title");
@@ -3600,200 +3523,6 @@ document.getElementById("impactSubmitBtn").addEventListener("click", ()=>{
   impactFromIspTouched = false;
   document.querySelectorAll('[data-role="reasonCheck"]').forEach(el=> el.checked = false);
   status.textContent = "Thanks — logged!";
-});
-
-document.getElementById("exportPdf").addEventListener("click", ()=>{
-  document.querySelectorAll(".row").forEach(r=>r.classList.add("open"));
-  window.print();
-});
-
-document.getElementById("exportCsv").addEventListener("click", ()=>{
-  const header = ["Rank","ISP","Type","Subscribers","Metric","Status","QoS Avg","QoS Reports","Note","Source"];
-  const rows = DATA.slice().sort((a,b)=>{
-    if(a.subscribers===null && b.subscribers===null) return 0;
-    if(a.subscribers===null) return 1;
-    if(b.subscribers===null) return -1;
-    return b.subscribers - a.subscribers;
-  }).map((d,i)=>{
-    const qos = aggregate(d.name);
-    return [
-      d.subscribers!==null ? i+1 : "",
-      d.name, d.type, d.subscribers!==null ? d.subscribers : "", d.subLabel,
-      STATUS_LABEL[d.status], qos.count? qos.avg.toFixed(2) : "", qos.count,
-      d.note.replace(/"/g,"'"), d.source
-    ];
-  });
-  downloadCsv(header, rows, "zimbabwe-isp-tracker.csv");
-});
-
-document.getElementById("exportQos").addEventListener("click", ()=>{
-  const header = ["ISP","Stars","City","Comment","Reported"];
-  const rows = REPORTS.slice().sort((a,b)=>b.ts-a.ts).map(r=>[
-    r.isp, r.stars, r.city, (r.comment||"").replace(/"/g,"'"), new Date(r.ts).toISOString()
-  ]);
-  downloadCsv(header, rows, "zimbabwe-isp-qos-reports.csv");
-});
-
-document.getElementById("exportStatus").addEventListener("click", ()=>{
-  const header = ["ISP","City","Status","Comment","Reported"];
-  const rows = STATUS_REPORTS.slice().sort((a,b)=>b.ts-a.ts).map(r=>[
-    r.isp, r.city, r.status, (r.comment||"").replace(/"/g,"'"), new Date(r.ts).toISOString()
-  ]);
-  downloadCsv(header, rows, "zimbabwe-isp-status-reports.csv");
-});
-
-document.getElementById("exportSpeed").addEventListener("click", ()=>{
-  const header = ["ISP","City","Download Mbps","Upload Mbps","Method","Idle Ping ms","Download Ping ms","Upload Ping ms","Jitter Down ms","Jitter Up ms","Packet Loss %","Connection","Device","Comment","Reported"];
-  const rows = SPEED_REPORTS.slice().sort((a,b)=>b.ts-a.ts).map(r=>[
-    r.isp, r.city, r.download_mbps, r.upload_mbps, r.test_method || "manual",
-    r.latency_idle_ms ?? "", r.latency_download_ms ?? "", r.latency_upload_ms ?? "",
-    r.jitter_download_ms ?? "", r.jitter_upload_ms ?? "", r.packet_loss_pct ?? "",
-    r.connection_type ?? "", r.device_type ?? "",
-    (r.comment||"").replace(/"/g,"'"), new Date(r.ts).toISOString()
-  ]);
-  downloadCsv(header, rows, "zimbabwe-isp-speed-reports.csv");
-});
-
-function downloadCsv(header, rows, filename){
-  const csv = [header, ...rows].map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
-  const blob = new Blob([csv], {type:"text/csv"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-/* ---------- EPUB export (built client-side with JSZip) ---------- */
-function escapeXml(s){
-  return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-function xhtmlWrap(title, body){
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>${escapeXml(title)}</title><meta charset="utf-8"/>
-<style>body{font-family:serif;line-height:1.5;} h1{font-size:1.6em;} h2{font-size:1.3em;margin-top:1.4em;} small{color:#555;}</style>
-</head>
-<body>${body}</body>
-</html>`;
-}
-async function buildEpub(){
-  const zip = new JSZip();
-  zip.file("mimetype", "application/epub+zip", {compression:"STORE"});
-  zip.folder("META-INF").file("container.xml", `<?xml version="1.0" encoding="UTF-8"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-  <rootfiles>
-    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-  </rootfiles>
-</container>`);
-
-  const oebps = zip.folder("OEBPS");
-  const isRows = DATA.slice().sort((a,b)=>{
-    if(a.subscribers===null && b.subscribers===null) return 0;
-    if(a.subscribers===null) return 1;
-    if(b.subscribers===null) return -1;
-    return b.subscribers - a.subscribers;
-  });
-  const convAgg = conversionsAggregate();
-
-  const isChapterBody = "<h1>ISP Rankings &amp; Quality of Service</h1>" + isRows.map((d,i)=>{
-    const qos = aggregate(d.name);
-    const convCount = convAgg.byIsp[d.name] || 0;
-    const ov = overallStatus(d.name);
-    const statusText = ov ? STATUS_META[ov.level].label + ((ov.level==="down"||ov.level==="down-long") ? " ("+formatDuration(ov.downForMs)+")" : "") : "No status reports yet";
-    const speedCalib = calibratedSpeed(d.name);
-    const speedText = speedCalib ? speedCalib.downloadMbps.toFixed(1)+" Mbps down / "+speedCalib.uploadMbps.toFixed(1)+" Mbps up (24h, half-hour calibrated)" : "No speed tests in the last 24h";
-    return `<h2>${i+1}. ${escapeXml(d.name)}</h2>
-      <p><em>${escapeXml(d.type)}</em></p>
-      <p><strong>Subscribers:</strong> ${d.subscribers!==null?fmt(d.subscribers):'—'} (${escapeXml(d.subLabel)})</p>
-      <p>${escapeXml(d.note)}</p>
-      <p><small>Source: ${escapeXml(d.source)}</small></p>
-      <p><strong>Crowdsourced QoS:</strong> ${qos.count ? qos.avg.toFixed(1)+'★ from '+qos.count+' report(s)' : 'No ratings yet'}</p>
-      <p><strong>Reported live status:</strong> ${escapeXml(statusText)}</p>
-      <p><strong>Bandwidth:</strong> ${escapeXml(speedText)}</p>
-      ${convCount ? `<p><strong>Reported switches/signups:</strong> ${convCount}</p>` : ""}`;
-  }).join("\n<hr/>\n");
-
-  const impactBody = `<h1>Proof of Impact</h1>
-    <p>${convAgg.total} reported switch(es)/signup(s) logged via this tracker.</p>
-    <h2>By destination ISP</h2>
-    <ul>${Object.entries(convAgg.byIsp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<li>${escapeXml(k)}: ${v}</li>`).join("")}</ul>
-    <h2>By reason</h2>
-    <ul>${Object.entries(convAgg.byReason).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<li>${escapeXml(t("reason_"+k))}: ${v}</li>`).join("")}</ul>
-    <h2>Recent stories</h2>
-    <ul>${CONVERSIONS.slice().sort((a,b)=>b.ts-a.ts).slice(0,20).map(c=>
-      `<li>${escapeXml(c.from_isp||"New subscriber")} → ${escapeXml(c.to_isp)} (${escapeXml(c.city)}): ${escapeXml((c.reasons||[]).join(", "))}${c.comment? " — “"+escapeXml(c.comment)+"”":""}</li>`
-    ).join("")}</ul>`;
-
-  const chapters = [
-    { id:"titlepage", title:"Zimbabwe ISP Tracker", file:"title.xhtml",
-      body:`<h1>Zimbabwe ISP Tracker</h1><p>A POTRAZ-sourced subscriber tracker with crowdsourced quality-of-service ratings and reported switches/signups.</p><p>Generated ${new Date().toISOString().slice(0,10)}.</p>` },
-    { id:"isps", title:"ISP Rankings & QoS", file:"isps.xhtml", body:isChapterBody },
-    { id:"impact", title:"Proof of Impact", file:"impact.xhtml", body:impactBody }
-  ];
-  chapters.forEach(ch=> oebps.file(ch.file, xhtmlWrap(ch.title, ch.body)));
-
-  oebps.file("nav.xhtml", `<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
-<head><title>Table of Contents</title></head>
-<body>
-<nav epub:type="toc" id="toc">
-<h1>Contents</h1>
-<ol>
-${chapters.map(ch=>`<li><a href="${ch.file}">${escapeXml(ch.title)}</a></li>`).join("\n")}
-</ol>
-</nav>
-</body>
-</html>`);
-
-  oebps.file("toc.ncx", `<?xml version="1.0" encoding="UTF-8"?>
-<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
-  <head><meta name="dtb:uid" content="urn:uuid:zw-isp-tracker"/></head>
-  <docTitle><text>Zimbabwe ISP Tracker</text></docTitle>
-  <navMap>
-    ${chapters.map((ch,i)=>`<navPoint id="np${i+1}" playOrder="${i+1}"><navLabel><text>${escapeXml(ch.title)}</text></navLabel><content src="${ch.file}"/></navPoint>`).join("\n")}
-  </navMap>
-</ncx>`);
-
-  oebps.file("content.opf", `<?xml version="1.0" encoding="UTF-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookId">
-  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <dc:identifier id="BookId">urn:uuid:zw-isp-tracker-${Date.now()}</dc:identifier>
-    <dc:title>Zimbabwe ISP Tracker</dc:title>
-    <dc:language>en</dc:language>
-    <dc:creator>Zimbabwe ISP Tracker (crowdsourced)</dc:creator>
-    <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/,'Z')}</meta>
-  </metadata>
-  <manifest>
-    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
-    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
-    ${chapters.map(ch=>`<item id="${ch.id}" href="${ch.file}" media-type="application/xhtml+xml"/>`).join("\n")}
-  </manifest>
-  <spine toc="ncx">
-    ${chapters.map(ch=>`<itemref idref="${ch.id}"/>`).join("\n")}
-  </spine>
-</package>`);
-
-  return zip.generateAsync({ type:"blob", mimeType:"application/epub+zip", compression:"DEFLATE" });
-}
-
-document.getElementById("exportEpub").addEventListener("click", async ()=>{
-  const btn = document.getElementById("exportEpub");
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = "⏳ Building EPUB…";
-  try{
-    const blob = await buildEpub();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "zimbabwe-isp-tracker.epub";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }catch(e){
-    console.error("EPUB export failed", e);
-    alert("Sorry, EPUB export failed: " + e.message);
-  }finally{
-    btn.innerHTML = originalHtml;
-  }
 });
 
 document.getElementById("resetQos").addEventListener("click", async ()=>{

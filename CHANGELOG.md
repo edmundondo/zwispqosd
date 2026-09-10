@@ -7,6 +7,27 @@ All notable changes to the Zimbabwe ISP Tracker are recorded here. Format follow
 The version number shown here matches the `<meta name="app-version">` tag in `index.html`
 and the `v{version}` badge in each page's footer.
 
+## [1.2.0] — 2026-09-10
+
+### Removed
+- **All export options (Export PDF Report, Export ISP CSV, Export QoS CSV, Export Status CSV,
+  Export Speed CSV, Export EPUB) have moved to the privileged `zwispqosp` admin app.** This demo
+  is the shared public-access surface — exporting the underlying data is now part of the
+  privileged/analytics tier, matching the split Ed set out: `zwispqosd` = public demo, `zwispqosp`
+  = privileged backend for analytics, reporting, tweaking, and upgrading. Removed the six toolbar
+  buttons, their click handlers, the CSV/EPUB builder functions (`downloadCsv`, `escapeXml`,
+  `xhtmlWrap`, `buildEpub`), the now-unused `btn_export_*` translation keys in every language
+  block, and the JSZip `<script>` tag (nothing on this page uses it anymore).
+- The in-page free "sample ISP benchmark report" teaser (the one whose call-to-action pitches a
+  licensed subscription) is untouched — that's a different feature from the download buttons and
+  stays here as the public-facing teaser it's meant to be.
+
+### Notes
+- The equivalent exports in `zwispqosp` are actually more capable than the ones removed here:
+  they read Supabase's full history for the selected site rather than this page's client-side
+  1000-row cache, and they cover every site the admin app knows about via its site selector, not
+  just Zimbabwe.
+
 ## [1.1.4] — 2026-09-09
 
 ### Fixed
