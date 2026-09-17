@@ -7,6 +7,36 @@ All notable changes to the Zimbabwe ISP Tracker are recorded here. Format follow
 The version number shown here matches the `<meta name="app-version">` tag in `index.html`
 and the `v{version}` badge in each page's footer.
 
+## [1.3.0] — 2026-09-16
+
+### Added
+- **Real area/suburb picker on every rating/report form** (QoS rating, live-status report, speed
+  test, switch/signup) — a new `<select>` next to the existing city picker, populated from a
+  researched, sourced list of real suburbs/areas per tracked city (`AREAS` in `index.html`;
+  sourcing and confidence level per city are documented in the project's architecture notes, not
+  guessed or invented). Picking a city populates that city's real areas; the geolocation "Use my
+  location" button still only ever resolves to a tracked *city* (never an area) and clears the
+  area choice when it fires — this stays a tester's own pick, consistent with this app's existing
+  privacy design (raw GPS coordinates are still never sent to the backend, only the resolved city
+  name and, now, an optional self-picked area).
+- Coverage is uneven and stated plainly rather than papered over: Harare and Bulawayo have
+  near-exhaustive sourced lists; several smaller towns (Marondera, Zvishavane, Redcliff, Victoria
+  Falls, Hwange) only have a handful of confirmed areas because that's genuinely all that could be
+  traced to a real source (Wikipedia, council/master-plan documents, academic studies, established
+  news outlets) — picking "Whole city / not sure" is always available and the honest default.
+
+### Notes
+- Backend support for this shipped first as an additive, nullable `area` column on
+  `qos_reports`/`status_reports`/`speed_reports`/`conversions` in the shared Supabase project
+  (migration `add_area_column_for_suburb_level_drilldown`) — existing rows stay city-only until
+  testers resubmit with the new field; nothing is backfilled or inferred.
+- Companion to `zwispqosp` v0.5.0's provider-analytics drill-down, which is what actually surfaces
+  this new field (City → Area → ISP → individual reports).
+- Not yet ported to the other four country demos (`bwispqosd`/`saispqosd`/`zaispqosd`/`moispqosd`)
+  — same shared Supabase tables, so their reports can already carry an `area` once each demo gets
+  its own real, sourced per-city area list (a separate research pass per country, not a copy-paste
+  of Zimbabwe's).
+
 ## [1.2.0] — 2026-09-10
 
 ### Removed

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.2.0">
+<meta name="app-version" content="1.3.0">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -546,6 +546,7 @@
         <div class="loc-row" style="margin-top:12px;">
           <button class="btn small" id="impactLocBtn" type="button">📍 <span id="impactLocLabel">Use my location</span></button>
           <select class="city-select" id="impactCitySelect"><option value="">…</option></select>
+          <select class="city-select" id="impactAreaSelect"><option value="">…</option></select>
         </div>
         <div class="loc-status" id="impactLocStatus"></div>
         <textarea class="comment-box" id="impactComment" maxlength="500" style="margin-top:10px;" placeholder="Optional: tell us more…"></textarea>
@@ -612,7 +613,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.2.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.3.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -849,6 +850,8 @@ const I18N = {
     your_rating: "Your rating",
     btn_use_location: "Use my location",
     city_manual: "…or choose city manually",
+    area_manual: "Area / suburb (optional)",
+    area_none: "Whole city / not sure",
     comment_placeholder: "Optional: describe your experience (speed, reliability, outages)…",
     btn_submit_rating: "Submit rating",
     no_ratings_yet: "No ratings yet",
@@ -1849,6 +1852,47 @@ const CITIES = [
   {name:"Rusape", lat:-18.5333, lon:32.1167}
 ];
 
+/* ---------- Real, sourced suburb/area names per city (added 2026-09-16) ----------
+   Every name here comes from a traceable source (Wikipedia city articles, official
+   council/master-plan documents, academic studies, or established news outlets) —
+   nothing here is inferred or invented. Coverage varies: Harare/Bulawayo are
+   near-exhaustive; several smaller towns (Marondera, Zvishavane, Redcliff, Victoria
+   Falls, Hwange) only have a handful of confirmed areas because that's all that
+   could be sourced — see the research notes in the project's architecture doc for
+   the per-city source list and confidence level. This is deliberately a picker for
+   testers to self-select, never something we infer from GPS — raw coordinates are
+   still never sent anywhere (see the location-detection code below), and
+   geolocation only ever resolves to a CITY, never an area. */
+const AREAS = {
+  "Harare": ["Avondale","Alexandra Park","Arcadia","Arlington","Avonlea","Belgravia","Belvedere","Borrowdale","Borrowdale Brooke","Bloomingdale","Chisipite","Eastlea","Emerald Hill","Glen Lorne","Greendale","Hatcliffe","Hatfield","Highlands","Hogerty Hill","Mabelreign","Marlborough","Milton Park","Mount Pleasant","Mount Pleasant Heights","Newlands","Shawasha Hills","Southerton","Strathaven","Sunningdale","The Avenues","The Grange","Waterfalls","Westgate","Westlea","Willowvale","Workington","Mbare","Highfield","Glen Norah","Glen View","Budiriro","Kuwadzana","Dzivarasekwa","Warren Park","Kambuzuma","Mufakose","Mabvuku","Tafara"],
+  "Bulawayo": ["Ascot","Barbourfields","Barham Green","Beacon Hill","Bellevue","Belmont","Belmont Industrial Area","Bradfield","Burnside","Cement","Cowdray Park","Donnington","Donnington West","Douglasdale","Eloana","Emakhandeni","Emganwini","Emhlangeni","Enqotsheni","Entumbane","Fagadola","Famona","Fortunes Gate","Four Winds","Glencoe","Glengary","Glenville","Granite Park","Greenhill","Gwabalanda","Harrisvale","Helenvale","Highmount","Hillcrest","Hillside","Hillside South","Hume Park","Hyde Park","Ilanda","Iminyela","Intini","Jacaranda","Kelvin","Kenilworth","Khumalo","Khumalo North","Kilallo","Killarney","Kingsdale","Lakeside","Lobengula","Lobenvale","Lochview","Luveve","Mabuthweni","Magwegwe","Magwegwe North","Magwegwe West","Mahatshula","Makokoba","Malindela","Manningdale","Marlands","Matsheumhlope","Matshobana","Montgomery","Montrose","Morningside","Mpopoma","Munda","Mzilikazi","New Luveve","Newsmansford","Newton","Newton West","Nguboyenja","Njube","Nketa","Nkulumane","North End","North Lynne","North Trenance","Northlea","Northvale","Ntaba Moyo","Orange Grove","Paddonhurst","Parklands","Parkview","Phelandaba","Phumula","Phumula South","Queens Park","Queens Park East","Queens Park West","Queensdale","Rangemore","Raylton","Richmond","Riverside","Romney Park","Sauerstown","Selbourne Park","Sizinda","Southdale","Souththwold","Steeldale","Sunninghill","Sunnyside","Tegela","The Jungle","Thorngrove","Trenance","Tshabalala","Tshabalala Extension","Umguza Estate","Upper Rangemore","Waterford","Waterlea","West Somerton","Westgate","Westondale","Willsgrove","Windsor Park","Woodlands","Woodville","Woodville Park"],
+  "Chitungwiza": ["Zengeza","Seke","St Mary's","Manyame Park","Chikwanha","Makoni","Nyatsime"],
+  "Mutare": ["Murambi","Fairbridge Park","Morningside","Tiger's Kloof","Palmerston","The Avenues","Utopia","Darlington","Greenside","Greenside Extension","Yeovil","Westlea","Florida","Toronto","Bordervale","Chikanga","Sakubva","Dangamvura","Weirmouth","Fern Valley","Hobhouse","Natview Park","Garikai","Bernwin"],
+  "Gweru": ["Mkoba","Ascot","Mambo","Riverside","Mtapa","Nashville","Clifton Park","Woodlands Park","Daylesford","Ivene","Senga"],
+  "Kwekwe": ["Mbizo","Amaveni","Msasa Park","Goldrich","Hillandale","Newtown","Gaika","Beverly Hills","Chicago","Golden Acres","Southwood","Fitchlea"],
+  "Kadoma": ["Rimuka","Ngezi","Waverley","Eastview","Westview","Munhumutapa","General Baracks","Eiffel Flats"],
+  "Masvingo": ["Mucheke","Rujeko","Runyararo","Rhodene","Eastvale","Target Kopje","Clipsham Park","Morningside","Glenlivet","Bushmead","Zimre Park"],
+  "Chinhoyi": ["Brundish","Rusununguko","Rujeko","Chikonohono","Hunyani","Gadzema","Mpata","Ruvimbo","Katanda","Coldstream","White City","Cherima","Old Single Quarters","Pfungwa","Dzakanaka","Chitambo","Orange Grove","Riverside","Mzari","Golf Course","Mapako","Nemakonde"],
+  "Norton": ["Katanga","Calfa","Maridale","Ngoni","Johannesburg","Knowe","Twin Lakes","Nharira","Galloway"],
+  "Marondera": ["Dombotombo","Nyameni","Cherutombo"],
+  "Ruwa": ["Damofalls Park","Timire Park","Ruwa Central","Mabvazuva Estate","Chipukutu Park","Dabuka Village","Old Windsor Park","Boulder Estate","Zimre Park","Riverside Park","Erasmus Park","Country Club Estate","Springvale","Fairview","Cranbrooke","Silverbrooke","Rockview","Adelaide"],
+  "Chegutu": ["Chinengundu","Pfupajena","Kaguvi","Umvovo","Hartley Hills","Hintonville","Rifle Range"],
+  "Zvishavane": ["Mandava","Maglas","Kandodo","Platinum Park"],
+  "Bindura": ["Brockdale","Atherstone","Woodbrook","Claverhill","Greenhill","Chipadze","Chiwaridzo","Aerodrome","Garikayi"],
+  "Beitbridge": ["Matibe","Tshidixwa","Sitauze","Khwalu 1","Khwalu 2","Mabidi","Vhembe View","Madinginye","Siyoka","Limpopo View","Dulivhadzimu","Milayo Industrial Area"],
+  "Redcliff": ["Torwood","Rutendo"],
+  "Victoria Falls": ["Chinotimba","Mkhosana","Aerodrome"],
+  "Hwange": ["Empumalanga","Baobab","Chibondo"],
+  "Rusape": ["Vengere","Mabvazuva","Tsanzaguru","Magamba Township","Silverbow"]
+};
+function areasForCity(cityName){ return AREAS[cityName] || []; }
+function areaOptionsHtml(cityName){
+  const areas = areasForCity(cityName);
+  const noneLabel = t("area_none");
+  if(!areas.length) return `<option value="">${t("area_manual")}</option>`;
+  return `<option value="">${noneLabel}</option>` + areas.map(a=>`<option value="${a}">${a}</option>`).join("");
+}
+
 const DAY = 24*60*60*1000;
 const nowTs = Date.now();
 const SEED_REPORTS = [
@@ -2343,7 +2387,7 @@ async function submitReport(report){
     try{
       const { error } = await supa.from("qos_reports").insert([{
         site: SITE_ID,
-        isp: report.isp, stars: report.stars, city: report.city, comment: report.comment,
+        isp: report.isp, stars: report.stars, city: report.city, area: report.area || null, comment: report.comment,
         device_id: SpamGuard.deviceId()
       }]);
       if(error) throw error;
@@ -2402,7 +2446,7 @@ async function submitStatus(entry){
     try{
       const { error } = await supa.from("status_reports").insert([{
         site: SITE_ID,
-        isp: entry.isp, city: entry.city, status: entry.status, comment: entry.comment,
+        isp: entry.isp, city: entry.city, area: entry.area || null, status: entry.status, comment: entry.comment,
         device_id: SpamGuard.deviceId()
       }]);
       if(error) throw error;
@@ -2424,7 +2468,7 @@ async function submitSpeed(entry){
   if(supa){
     const baseRow = {
       site: SITE_ID,
-      isp: entry.isp, city: entry.city, download_mbps: entry.download_mbps, upload_mbps: entry.upload_mbps, comment: entry.comment,
+      isp: entry.isp, city: entry.city, area: entry.area || null, download_mbps: entry.download_mbps, upload_mbps: entry.upload_mbps, comment: entry.comment,
       device_id: SpamGuard.deviceId()
     };
     // Richer columns from the built-in automatic speed test (v1.1.0+). If the
@@ -2470,7 +2514,7 @@ async function submitConversion(entry){
     try{
       const { error } = await supa.from("conversions").insert([{
         site: SITE_ID,
-        to_isp: entry.to_isp, from_isp: entry.from_isp, reasons: entry.reasons, city: entry.city, comment: entry.comment,
+        to_isp: entry.to_isp, from_isp: entry.from_isp, reasons: entry.reasons, city: entry.city, area: entry.area || null, comment: entry.comment,
         device_id: SpamGuard.deviceId()
       }]);
       if(error) throw error;
@@ -2561,6 +2605,8 @@ function applyStaticTranslations(){
 
   const impactCitySelect = document.getElementById("impactCitySelect");
   impactCitySelect.innerHTML = `<option value="">${t("city_manual")}</option>` + CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("");
+  const impactAreaSelectInit = document.getElementById("impactAreaSelect");
+  if(impactAreaSelectInit && impactAreaSelectInit.options.length <= 1) impactAreaSelectInit.innerHTML = areaOptionsHtml(impactCitySelect.value);
 
   document.getElementById("simpleModeLabel").textContent = document.body.classList.contains("simple-mode") ? t("simple_mode_on") : t("simple_mode_off");
 
@@ -2869,6 +2915,9 @@ function renderList(){
                   <option value="">${t("city_manual")}</option>
                   ${CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("")}
                 </select>
+                <select class="city-select" data-role="statusAreaSelect">
+                  <option value="">${t("area_manual")}</option>
+                </select>
               </div>
               <div class="loc-status" data-role="statusLocStatus"></div>
               <textarea class="comment-box" data-role="statusCommentBox" maxlength="500" placeholder="${t("comment_placeholder")}"></textarea>
@@ -2908,6 +2957,9 @@ function renderList(){
                   <option value="">${t("city_manual")}</option>
                   ${CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("")}
                 </select>
+                <select class="city-select" data-role="speedAreaSelect">
+                  <option value="">${t("area_manual")}</option>
+                </select>
               </div>
               <div class="loc-status" data-role="speedLocStatus"></div>
               <textarea class="comment-box" data-role="speedCommentBox" maxlength="500" placeholder="${t("comment_placeholder")}"></textarea>
@@ -2938,6 +2990,9 @@ function renderList(){
                 <select class="city-select" data-role="citySelect">
                   <option value="">${t("city_manual")}</option>
                   ${CITIES.map(c=>`<option value="${c.name}">${c.name}</option>`).join("")}
+                </select>
+                <select class="city-select" data-role="areaSelect">
+                  <option value="">${t("area_manual")}</option>
                 </select>
               </div>
               <div class="loc-status" data-role="locStatus"></div>
@@ -2993,6 +3048,7 @@ function renderList(){
     const locBtn = rowEl.querySelector('[data-role="locBtn"]');
     const locStatus = rowEl.querySelector('[data-role="locStatus"]');
     const citySelect = rowEl.querySelector('[data-role="citySelect"]');
+    const areaSelect = rowEl.querySelector('[data-role="areaSelect"]');
 
     locBtn.addEventListener("click",(e)=>{
       e.stopPropagation();
@@ -3006,6 +3062,8 @@ function renderList(){
         const { city, distanceKm } = nearestCity(latitude, longitude);
         rateForm.dataset.city = city;
         citySelect.value = city;
+        delete rateForm.dataset.area;
+        if(areaSelect) areaSelect.innerHTML = areaOptionsHtml(city);
         locStatus.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
       }, err=>{
         locStatus.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
@@ -3015,8 +3073,17 @@ function renderList(){
     citySelect.addEventListener("click", (e)=> e.stopPropagation());
     citySelect.addEventListener("change",(e)=>{
       rateForm.dataset.city = citySelect.value;
+      delete rateForm.dataset.area;
+      if(areaSelect) areaSelect.innerHTML = areaOptionsHtml(citySelect.value);
       locStatus.textContent = citySelect.value ? "City set to "+citySelect.value : "";
     });
+
+    if(areaSelect){
+      areaSelect.addEventListener("click", (e)=> e.stopPropagation());
+      areaSelect.addEventListener("change",(e)=>{
+        rateForm.dataset.area = areaSelect.value;
+      });
+    }
 
     const commentBox = rowEl.querySelector('[data-role="commentBox"]');
     commentBox.addEventListener("click",(e)=> e.stopPropagation());
@@ -3041,8 +3108,9 @@ function renderList(){
         return;
       }
       const city = rateForm.dataset.city || "Unknown";
+      const area = rateForm.dataset.area || null;
       const phone = (phoneInput.value||"").trim();
-      submitReport({ isp:name, stars, comment:(commentBox.value||"").trim(), city, ts: Date.now() });
+      submitReport({ isp:name, stars, comment:(commentBox.value||"").trim(), city, area, ts: Date.now() });
       if(phone) upsertCustomer(phone, detectIspFromPhone(phone));
       phoneInput.value = ""; phoneHint.textContent = "";
     });
@@ -3082,6 +3150,7 @@ function renderList(){
     const statusLocBtn = rowEl.querySelector('[data-role="statusLocBtn"]');
     const statusLocStatus = rowEl.querySelector('[data-role="statusLocStatus"]');
     const statusCitySelect = rowEl.querySelector('[data-role="statusCitySelect"]');
+    const statusAreaSelect = rowEl.querySelector('[data-role="statusAreaSelect"]');
 
     statusLocBtn.addEventListener("click",(e)=>{
       e.stopPropagation();
@@ -3095,6 +3164,8 @@ function renderList(){
         const { city, distanceKm } = nearestCity(latitude, longitude);
         statusForm.dataset.city = city;
         statusCitySelect.value = city;
+        delete statusForm.dataset.area;
+        if(statusAreaSelect) statusAreaSelect.innerHTML = areaOptionsHtml(city);
         statusLocStatus.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
       }, err=>{
         statusLocStatus.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
@@ -3104,8 +3175,17 @@ function renderList(){
     statusCitySelect.addEventListener("click", (e)=> e.stopPropagation());
     statusCitySelect.addEventListener("change",(e)=>{
       statusForm.dataset.city = statusCitySelect.value;
+      delete statusForm.dataset.area;
+      if(statusAreaSelect) statusAreaSelect.innerHTML = areaOptionsHtml(statusCitySelect.value);
       statusLocStatus.textContent = statusCitySelect.value ? "City set to "+statusCitySelect.value : "";
     });
+
+    if(statusAreaSelect){
+      statusAreaSelect.addEventListener("click", (e)=> e.stopPropagation());
+      statusAreaSelect.addEventListener("change",(e)=>{
+        statusForm.dataset.area = statusAreaSelect.value;
+      });
+    }
 
     const statusCommentBox = rowEl.querySelector('[data-role="statusCommentBox"]');
     statusCommentBox.addEventListener("click",(e)=> e.stopPropagation());
@@ -3119,7 +3199,8 @@ function renderList(){
         return;
       }
       const city = statusForm.dataset.city || "Unknown";
-      submitStatus({ isp:name, city, status, comment:(statusCommentBox.value||"").trim(), ts: Date.now() });
+      const area = statusForm.dataset.area || null;
+      submitStatus({ isp:name, city, area, status, comment:(statusCommentBox.value||"").trim(), ts: Date.now() });
       statusForm.dataset.status = "";
       statusChoices.querySelectorAll(".status-choice").forEach(b=>b.classList.remove("active"));
       statusCommentBox.value = "";
@@ -3140,6 +3221,7 @@ function renderList(){
     const speedLocBtn = rowEl.querySelector('[data-role="speedLocBtn"]');
     const speedLocStatus = rowEl.querySelector('[data-role="speedLocStatus"]');
     const speedCitySelect = rowEl.querySelector('[data-role="speedCitySelect"]');
+    const speedAreaSelect = rowEl.querySelector('[data-role="speedAreaSelect"]');
 
     speedLocBtn.addEventListener("click",(e)=>{
       e.stopPropagation();
@@ -3153,6 +3235,8 @@ function renderList(){
         const { city, distanceKm } = nearestCity(latitude, longitude);
         speedForm.dataset.city = city;
         speedCitySelect.value = city;
+        delete speedForm.dataset.area;
+        if(speedAreaSelect) speedAreaSelect.innerHTML = areaOptionsHtml(city);
         speedLocStatus.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
       }, err=>{
         speedLocStatus.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
@@ -3162,8 +3246,17 @@ function renderList(){
     speedCitySelect.addEventListener("click", (e)=> e.stopPropagation());
     speedCitySelect.addEventListener("change",(e)=>{
       speedForm.dataset.city = speedCitySelect.value;
+      delete speedForm.dataset.area;
+      if(speedAreaSelect) speedAreaSelect.innerHTML = areaOptionsHtml(speedCitySelect.value);
       speedLocStatus.textContent = speedCitySelect.value ? "City set to "+speedCitySelect.value : "";
     });
+
+    if(speedAreaSelect){
+      speedAreaSelect.addEventListener("click", (e)=> e.stopPropagation());
+      speedAreaSelect.addEventListener("change",(e)=>{
+        speedForm.dataset.area = speedAreaSelect.value;
+      });
+    }
 
     const speedCommentBox = rowEl.querySelector('[data-role="speedCommentBox"]');
     speedCommentBox.addEventListener("click",(e)=> e.stopPropagation());
@@ -3192,10 +3285,11 @@ function renderList(){
         return;
       }
       const city = speedForm.dataset.city || "Unknown";
+      const area = speedForm.dataset.area || null;
       let extra = {};
       try{ extra = rowEl.dataset.speedExtra ? JSON.parse(rowEl.dataset.speedExtra) : {}; }catch(parseErr){}
       submitSpeed({
-        isp:name, city, download_mbps: downloadVal, upload_mbps: uploadVal,
+        isp:name, city, area, download_mbps: downloadVal, upload_mbps: uploadVal,
         comment:(speedCommentBox.value||"").trim(), ts: Date.now(),
         test_method: extra.test_method || "manual",
         latency_idle_ms: extra.latency_idle_ms ?? null,
@@ -3469,6 +3563,7 @@ document.getElementById("suggestSubmitBtn").addEventListener("click", ()=>{
 document.getElementById("impactLocBtn").addEventListener("click", ()=>{
   const status = document.getElementById("impactLocStatus");
   const citySelect = document.getElementById("impactCitySelect");
+  const areaSelect = document.getElementById("impactAreaSelect");
   if(!navigator.geolocation){
     status.textContent = "Geolocation isn't supported here — pick a city manually.";
     return;
@@ -3478,10 +3573,18 @@ document.getElementById("impactLocBtn").addEventListener("click", ()=>{
     const { latitude, longitude } = pos.coords;
     const { city, distanceKm } = nearestCity(latitude, longitude);
     citySelect.value = city;
+    // Geolocation only ever resolves to a tracked city, never an area — the tester
+    // still picks their own area/suburb by hand (or leaves it blank).
+    if(areaSelect) areaSelect.innerHTML = areaOptionsHtml(city);
     status.textContent = "📍 Nearest tracked city: "+city+" (~"+distanceKm+" km away)";
   }, err=>{
     status.textContent = "Couldn't get your location (" + err.message + ") — pick a city manually.";
   }, {timeout:8000});
+});
+
+document.getElementById("impactCitySelect").addEventListener("change", ()=>{
+  const areaSelect = document.getElementById("impactAreaSelect");
+  if(areaSelect) areaSelect.innerHTML = areaOptionsHtml(document.getElementById("impactCitySelect").value);
 });
 
 document.getElementById("impactToIsp").addEventListener("change", ()=>{
@@ -3510,13 +3613,14 @@ document.getElementById("impactSubmitBtn").addEventListener("click", ()=>{
   const toIsp = document.getElementById("impactToIsp").value;
   const fromIsp = document.getElementById("impactFromIsp").value || null;
   const city = document.getElementById("impactCitySelect").value || "Unknown";
+  const area = document.getElementById("impactAreaSelect").value || null;
   const comment = document.getElementById("impactComment").value.trim();
   const reasons = Array.from(document.querySelectorAll('[data-role="reasonCheck"]:checked')).map(el=>el.value);
   const status = document.getElementById("impactLocStatus");
   const phone = document.getElementById("impactPhone").value.trim();
   if(!toIsp){ status.textContent = "Please choose which ISP you switched to / signed up with."; return; }
   if(!phone || !isValidPhone(phone)){ status.textContent = t("phone_required_note"); return; }
-  submitConversion({ to_isp: toIsp, from_isp: fromIsp, reasons, city, comment, ts: Date.now() });
+  submitConversion({ to_isp: toIsp, from_isp: fromIsp, reasons, city, area, comment, ts: Date.now() });
   upsertCustomer(phone, detectIspFromPhone(phone));
   document.getElementById("impactComment").value = "";
   document.getElementById("impactPhone").value = "";
