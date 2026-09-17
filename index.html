@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.3.0">
+<meta name="app-version" content="1.3.1">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -133,11 +133,17 @@
   .pill.estimated{background:rgba(232,185,63,.15);color:var(--yellow);border-color:rgba(232,185,63,.35);}
   .pill.unconfirmed{background:rgba(92,107,128,.18);color:var(--grey);border-color:rgba(92,107,128,.4);}
 
+  /* Auto-height expand/collapse via CSS grid (0fr -> 1fr): sizes to whatever the
+     content actually needs on any device, instead of clipping anything past a fixed
+     pixel cap (a fixed max-height used to silently cut off the bottom of tall detail
+     panels — e.g. the submit button below a long rating form — with no way to reach
+     the clipped part, since overflow was hidden and it wasn't just a page-scroll issue). */
   .detail{
-    max-height:0;overflow:hidden;transition:max-height .3s ease;
+    display:grid;grid-template-rows:0fr;overflow:hidden;transition:grid-template-rows .3s ease;
   }
-  .row.open .detail{max-height:1200px;margin-top:12px;}
+  .row.open .detail{grid-template-rows:1fr;margin-top:12px;}
   .detail-inner{
+    min-height:0;overflow:hidden;
     border-top:1px solid var(--border);padding-top:12px;font-size:13px;color:#c3cddb;line-height:1.55;
   }
   .detail-inner .src{color:var(--muted);font-size:12px;margin-top:8px;display:block;}
@@ -387,7 +393,8 @@
     .row{border:1px solid #ccc;break-inside:avoid;}
     .pill{border:1px solid #999;}
     .caret{display:none;}
-    .row .detail{max-height:none!important;margin-top:8px!important;}
+    .row .detail{grid-template-rows:1fr!important;margin-top:8px!important;}
+    .row .detail-inner{overflow:visible!important;}
     .qos-actions,.rate-form,.impact-form-card,.status-report-form,.speed-report-form{display:none!important;}
   }
 </style>
@@ -613,7 +620,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.3.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.3.1 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 

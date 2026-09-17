@@ -7,6 +7,20 @@ All notable changes to the Zimbabwe ISP Tracker are recorded here. Format follow
 The version number shown here matches the `<meta name="app-version">` tag in `index.html`
 and the `v{version}` badge in each page's footer.
 
+## [1.3.1] — 2026-09-17
+
+### Fixed
+- **The expanded provider row (star rating, live-status report, speed test) used a fixed
+  `max-height:1200px` cap to animate opening/closing, with `overflow:hidden` on the box the whole
+  time — any provider whose expanded content ran taller than that (which got steadily more likely
+  as the area picker, richer speed-report fields, and per-city report lists were added over recent
+  versions) had everything past ~1200px of content silently clipped away and **unreachable by any
+  amount of scrolling**, most visibly the comment box and "Submit rating" button on the QoS form.
+  Reported live from a screenshot: stars and city picker visible, nothing below them, not even
+  after scrolling. Replaced the fixed-pixel animation with a CSS grid `0fr → 1fr` expand (no JS,
+  no fixed cap) that always sizes to the row's actual content on any device, so nothing at the
+  bottom of a long provider card can ever be clipped off again, on a 320px phone or a desktop.
+
 ## [1.3.0] — 2026-09-16
 
 ### Added
