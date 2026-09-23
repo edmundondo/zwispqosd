@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.4.0">
+<meta name="app-version" content="1.5.0">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -78,6 +78,16 @@
     padding:10px 14px;color:var(--text);font-size:14px;outline:none;
   }
   .search:focus{border-color:var(--accent2);}
+  /* Contact block (v-next): +CC prefix chip for phone, optional email instead */
+  .contact-block{margin:0 0 4px;}
+  .contact-mode{display:flex;gap:6px;margin:0 0 6px;}
+  .contact-mode .chip{cursor:pointer;font:inherit;}
+  .phone-wrap{display:flex;align-items:stretch;width:100%;}
+  .phone-wrap .cc-prefix{display:flex;align-items:center;padding:0 10px;border:1px solid var(--border, #d0d5dd);border-right:none;border-radius:8px 0 0 8px;background:rgba(127,127,127,.08);font-weight:600;white-space:nowrap;user-select:none;}
+  .phone-wrap input{flex:1;min-width:0;border-top-left-radius:0 !important;border-bottom-left-radius:0 !important;}
+  .contact-block .email-input{width:100%;display:none;}
+  .contact-block.mode-email .phone-wrap{display:none;}
+  .contact-block.mode-email .email-input{display:block;}
   .chip{
     background:var(--panel);border:1px solid var(--border);border-radius:999px;
     padding:8px 14px;font-size:13px;color:var(--muted);cursor:pointer;
@@ -537,7 +547,7 @@
     <div class="impact-grid">
       <div class="impact-form-card">
         <div class="field-label" id="phoneSwitchLabel">Your phone number</div>
-        <input type="tel" class="search" id="impactPhone" placeholder="So we can help you switch — e.g. 077 123 4567" style="width:100%;margin-bottom:4px;">
+        <div class="contact-block" id="impactContact" style="margin-bottom:4px;"><div class="contact-mode"><button type="button" class="chip active" data-contact-mode="phone" id="impactModePhone">📱 Phone</button><button type="button" class="chip" data-contact-mode="email" id="impactModeEmail">✉️ Email</button></div><div class="phone-wrap"><span class="cc-prefix">+263</span><input type="tel" class="search" id="impactPhone" inputmode="tel" autocomplete="tel-national" placeholder="77 123 4567 (a leading 0 is fine)"></div><input type="email" class="search email-input" id="impactEmail" autocomplete="email" placeholder="you@example.com"></div>
         <div class="lexicon-note" style="margin:0 0 10px;" id="phoneSwitchConsent">Only used to follow up about this switch request — never shown publicly.</div>
         <div class="field-label" id="impactNewIspLabel">New / chosen ISP</div>
         <select class="city-select" id="impactToIsp" style="width:100%;margin-bottom:10px;">
@@ -620,7 +630,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.4.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.5.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -912,13 +922,17 @@ const I18N = {
     stat_speed_reports: "speed test reports (24h window)",
     speed_no_recent_any: "No speed tests reported in the last 24 hours yet.",
     speed_no_recent: "No recent (24h) data",
-    phone_label: "Your phone number (optional)",
-    phone_placeholder: "e.g. 077 123 4567",
+    phone_label: "Your phone number or email (optional)",
+    phone_placeholder: "77 123 4567 (a leading 0 is fine)",
     phone_consent: "Only used to follow up about this report or switch request — never shown publicly.",
     phone_detect_hint: "📱 Looks like {isp}, based on your number — numbers can be ported, please confirm.",
-    phone_label_switch: "Your phone number",
-    phone_placeholder_switch: "So we can help you switch — e.g. 077 123 4567",
-    phone_required_note: "Please add a phone number so we can follow up about your switch.",
+    phone_label_switch: "Your phone number or email",
+    phone_placeholder_switch: "77 123 4567 (a leading 0 is fine)",
+    phone_required_note: "Please add a valid phone number or email so we can follow up about your switch.",
+    contact_by_phone: "📱 Phone",
+    contact_by_email: "✉️ Email",
+    email_placeholder: "you@example.com",
+    contact_invalid_note: "That phone number or email doesn't look right — please check it.",
     simple_mode_off: "Simple Mode",
     simple_mode_on: "Simple Mode: ON",
     simple_nav_reset: "Show all",
@@ -2015,9 +2029,70 @@ function normalizePhone(raw){
   else if(d.indexOf("263")===0 && d.length>9) d = "0"+d.slice(3);
   return d;
 }
+/* Contact normalisation (v-next). The phone box shows a fixed "+263" prefix; people can type
+   the local number with or without the trunk 0 ("077 123 4567" or "77 123 4567"), or paste a full
+   international number. On submit it's silently converted to E.164 ("+263…") — the only format
+   ever stored. normalizePhone() above is kept only for carrier-prefix detection. */
+const PHONE_CFG = { cc: "263", nsnMin: 8, nsnMax: 9 };
+function toE164(raw){
+  let d = String(raw||"").trim();
+  const intl = /^(\+|00)/.test(d);
+  d = d.replace(/[^\d]/g,"");
+  if(!d) return "";
+  if(intl){ if(d.indexOf("00")===0 && /^00/.test(String(raw).trim())) d = d.slice(2); return "+"+d; }
+  if(d.indexOf(PHONE_CFG.cc)===0 && d.length - PHONE_CFG.cc.length >= PHONE_CFG.nsnMin) return "+"+d;
+  return "+" + PHONE_CFG.cc + d.replace(/^0+/,"");
+}
 function isValidPhone(raw){
-  const d = normalizePhone(raw);
-  return /^0\d{8,9}$/.test(d);
+  const e = toE164(raw);
+  if(!/^\+[1-9]\d{7,14}$/.test(e)) return false;
+  if(e.indexOf("+"+PHONE_CFG.cc)!==0) return true; // a foreign number pasted in full — accept as-is
+  const nsn = e.slice(PHONE_CFG.cc.length+1);
+  return nsn[0] !== "0" && nsn.length >= PHONE_CFG.nsnMin && nsn.length <= PHONE_CFG.nsnMax;
+}
+function isValidEmail(raw){
+  const e = String(raw||"").trim();
+  return e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+}
+async function upsertEmail(email){
+  if(!isValidEmail(email) || !supa) return;
+  try{
+    const { error } = await supa.rpc("add_contact_email", { p_email: String(email).trim(), p_site: SITE_ID });
+    if(error) throw error;
+  }catch(e){
+    console.warn("Could not sync contact email — the report/switch request itself was still saved", e);
+  }
+}
+/* Reads a .contact-block: returns {mode, value, valid, empty}. */
+function readContact(block){
+  if(!block) return { mode:"phone", value:"", valid:false, empty:true };
+  const mode = block.classList.contains("mode-email") ? "email" : "phone";
+  const raw = mode==="email" ? block.querySelector(".email-input").value : block.querySelector('input[type="tel"]').value;
+  const value = String(raw||"").trim();
+  return { mode, value, empty: !value, valid: mode==="email" ? isValidEmail(value) : isValidPhone(value) };
+}
+function saveContact(c, detectedIsp){
+  if(!c || c.empty || !c.valid) return;
+  if(c.mode==="email") upsertEmail(c.value); else upsertCustomer(c.value, detectedIsp);
+}
+function clearContact(block){
+  if(!block) return;
+  block.querySelectorAll("input").forEach(i=> i.value = "");
+}
+function wireContactBlock(block){
+  if(!block || block.dataset.wired) return;
+  block.dataset.wired = "1";
+  block.addEventListener("click", e=> e.stopPropagation());
+  block.querySelectorAll("[data-contact-mode]").forEach(btn=>{
+    btn.addEventListener("click", e=>{
+      e.preventDefault(); e.stopPropagation();
+      const mode = btn.getAttribute("data-contact-mode");
+      block.classList.toggle("mode-email", mode==="email");
+      block.querySelectorAll("[data-contact-mode]").forEach(b=> b.classList.toggle("active", b===btn));
+      const focusEl = mode==="email" ? block.querySelector(".email-input") : block.querySelector('input[type="tel"]');
+      if(focusEl) focusEl.focus();
+    });
+  });
 }
 function detectIspFromPhone(raw){
   const d = normalizePhone(raw);
@@ -2026,10 +2101,9 @@ function detectIspFromPhone(raw){
 async function upsertCustomer(phone, detectedIsp){
   if(!phone || !isValidPhone(phone) || !supa) return;
   try{
-    const { error } = await supa.from("customers").upsert(
-      { phone_number: normalizePhone(phone), country: "263", detected_isp: detectedIsp || null, last_seen: new Date().toISOString() },
-      { onConflict: "phone_number" }
-    );
+    // RPC, not .upsert(): an upsert needs a public SELECT policy on `customers`, which would expose
+    // every number. upsert_contact_phone() is SECURITY DEFINER and write-only for visitors.
+    const { error } = await supa.rpc("upsert_contact_phone", { p_phone: toE164(phone), p_site: SITE_ID, p_isp: detectedIsp || null });
     if(error) throw error;
   }catch(e){
     console.warn("Could not sync contact number — the report/switch request itself was still saved", e);
@@ -2641,6 +2715,9 @@ function applyStaticTranslations(){
   document.getElementById("phoneSwitchLabel").textContent = t("phone_label_switch");
   document.getElementById("phoneSwitchConsent").textContent = t("phone_consent");
   document.getElementById("impactPhone").placeholder = t("phone_placeholder_switch");
+  document.getElementById("impactEmail").placeholder = t("email_placeholder");
+  document.getElementById("impactModePhone").textContent = t("contact_by_phone");
+  document.getElementById("impactModeEmail").textContent = t("contact_by_email");
   document.getElementById("impactReasonsLabel").textContent = t("impact_reasons");
   document.getElementById("impactLocLabel").textContent = t("btn_use_location");
   document.getElementById("impactComment").placeholder = t("comment_placeholder");
@@ -3041,7 +3118,7 @@ function renderList(){
                 </select>
               </div>
               <div class="loc-status" data-role="locStatus"></div>
-              <input type="tel" class="search" data-role="phoneInput" placeholder="${t("phone_placeholder")}" style="width:100%;">
+              <div class="contact-block" data-role="contactBlock"><div class="contact-mode"><button type="button" class="chip active" data-contact-mode="phone">${t("contact_by_phone")}</button><button type="button" class="chip" data-contact-mode="email">${t("contact_by_email")}</button></div><div class="phone-wrap"><span class="cc-prefix">+${PHONE_CFG.cc}</span><input type="tel" class="search" data-role="phoneInput" inputmode="tel" autocomplete="tel-national" placeholder="${t("phone_placeholder")}"></div><input type="email" class="search email-input" data-role="emailInput" autocomplete="email" placeholder="${t("email_placeholder")}"></div>
               <div class="loc-status" data-role="phoneHint"></div>
               <div class="lexicon-note" style="margin:0;">${t("phone_consent")}</div>
               <textarea class="comment-box" data-role="commentBox" maxlength="500" placeholder="${t("comment_placeholder")}"></textarea>
@@ -3133,6 +3210,8 @@ function renderList(){
     const commentBox = rowEl.querySelector('[data-role="commentBox"]');
     commentBox.addEventListener("click",(e)=> e.stopPropagation());
 
+    const contactBlock = rowEl.querySelector('[data-role="contactBlock"]');
+    wireContactBlock(contactBlock);
     const phoneInput = rowEl.querySelector('[data-role="phoneInput"]');
     const phoneHint = rowEl.querySelector('[data-role="phoneHint"]');
     phoneInput.addEventListener("click",(e)=> e.stopPropagation());
@@ -3154,10 +3233,11 @@ function renderList(){
       }
       const city = rateForm.dataset.city || "Unknown";
       const area = rateForm.dataset.area || null;
-      const phone = (phoneInput.value||"").trim();
+      const contact = readContact(contactBlock);
+      if(!contact.empty && !contact.valid){ locStatus.textContent = t("contact_invalid_note"); return; }
       submitReport({ isp:name, stars, comment:(commentBox.value||"").trim(), city, area, ts: Date.now() });
-      if(phone) upsertCustomer(phone, detectIspFromPhone(phone));
-      phoneInput.value = ""; phoneHint.textContent = "";
+      saveContact(contact, contact.mode==="phone" ? detectIspFromPhone(contact.value) : null);
+      clearContact(contactBlock); phoneHint.textContent = "";
     });
 
     const referralLink = rowEl.querySelector('[data-role="referralLink"]');
@@ -3641,6 +3721,7 @@ document.getElementById("impactReferralCta").addEventListener("click",(e)=>{
   logReferralClick(link.getAttribute("data-isp"), link.getAttribute("data-context"));
 });
 
+wireContactBlock(document.getElementById("impactContact"));
 let impactFromIspTouched = false;
 document.getElementById("impactFromIsp").addEventListener("change", ()=>{ impactFromIspTouched = true; });
 document.getElementById("impactPhone").addEventListener("input", ()=>{
@@ -3662,13 +3743,13 @@ document.getElementById("impactSubmitBtn").addEventListener("click", ()=>{
   const comment = document.getElementById("impactComment").value.trim();
   const reasons = Array.from(document.querySelectorAll('[data-role="reasonCheck"]:checked')).map(el=>el.value);
   const status = document.getElementById("impactLocStatus");
-  const phone = document.getElementById("impactPhone").value.trim();
+  const contact = readContact(document.getElementById("impactContact"));
   if(!toIsp){ status.textContent = "Please choose which ISP you switched to / signed up with."; return; }
-  if(!phone || !isValidPhone(phone)){ status.textContent = t("phone_required_note"); return; }
+  if(contact.empty || !contact.valid){ status.textContent = t("phone_required_note"); return; }
   submitConversion({ to_isp: toIsp, from_isp: fromIsp, reasons, city, area, comment, ts: Date.now() });
-  upsertCustomer(phone, detectIspFromPhone(phone));
+  saveContact(contact, contact.mode==="phone" ? detectIspFromPhone(contact.value) : null);
   document.getElementById("impactComment").value = "";
-  document.getElementById("impactPhone").value = "";
+  clearContact(document.getElementById("impactContact"));
   impactFromIspTouched = false;
   document.querySelectorAll('[data-role="reasonCheck"]').forEach(el=> el.checked = false);
   status.textContent = "Thanks — logged!";
