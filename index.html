@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.3.1">
+<meta name="app-version" content="1.4.0">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -620,7 +620,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.3.1 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.4.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -682,7 +682,14 @@ const BACKEND_CONFIGURED = SUPABASE_CONFIG.url.indexOf("http") === 0
 
 let supa = null;
 if (BACKEND_CONFIGURED && window.supabase) {
-  supa = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+  // Public demo = anonymous only. All *ispqosd and *ispqosp sites are served from the same
+  // edmundondo.github.io origin and therefore share one localStorage; without these options the
+  // demo silently picks up (and tries to refresh) an admin's login from the *p app, and an expired
+  // admin token turns every public read into a 401. Keep the demo client stateless.
+  supa = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false,
+            storageKey: "matokipedo-public-" + SITE_ID }
+  });
 }
 
 /* =========================================================================
@@ -2338,6 +2345,7 @@ async function initBackend(){
   }
   setBanner("connecting", t("banner_connecting"));
   try{
+    try{ await Outbox.flush(); }catch(e){ console.warn("Outbox flush failed", e); }
     const [qosRes, convRes, trRes, statusRes, speedRes, refRes] = await Promise.all([
       supa.from("qos_reports").select("isp,stars,city,comment,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(1000),
       supa.from("conversions").select("to_isp,from_isp,reasons,city,comment,created_at").eq("site", SITE_ID).order("created_at",{ascending:false}).limit(500),
@@ -2382,6 +2390,64 @@ async function initBackend(){
   }
 }
 
+/* ---------- Offline-tolerant sync (outbox) ----------
+   Testers on patchy mobile data (or during a backend outage) used to lose every submission:
+   it stayed in their browser only. Now any insert that fails for a transient reason (network,
+   5xx, schema-cache/missing-column, rate limit) is queued in localStorage and re-sent on the
+   next page load and whenever the browser comes back online. Genuine validation/RLS rejections
+   (Postgres 22xxx/23xxx/42501) are NOT queued — resending those can never succeed. */
+const Outbox = (function(){
+  const KEY = SITE_ID + "_isp_outbox_v1";
+  const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+  function read(){ try{ const q = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(q) ? q : []; }catch(e){ return []; } }
+  function write(q){ try{ localStorage.setItem(KEY, JSON.stringify(q.slice(-100))); }catch(e){} }
+  function add(table, row){ const q = read(); q.push({ table, row, ts: Date.now() }); write(q); }
+  let flushing = false;
+  async function flush(){
+    if(!supa || flushing) return 0;
+    const q = read().filter(item => Date.now() - (item.ts || 0) < MAX_AGE_MS);
+    if(!q.length){ write([]); return 0; }
+    flushing = true;
+    const left = []; let sent = 0;
+    for(const item of q){
+      try{
+        const { error } = await supa.from(item.table).insert([item.row]);
+        if(error){ if(isPermanentDbError(error)){ console.warn("Dropping queued row the backend rejected", item, error); continue; } throw error; }
+        sent++;
+      }catch(e){ left.push(item); }
+    }
+    write(left);
+    flushing = false;
+    if(sent) console.info("Outbox: re-sent " + sent + " queued submission(s) to the shared backend");
+    return sent;
+  }
+  return { add, flush, size: () => read().length };
+})();
+function isPermanentDbError(err){
+  const c = err && err.code ? String(err.code) : "";
+  return /^(22|23)/.test(c) || c === "42501";
+}
+async function syncInsert(table, row, opts){
+  if(!supa) return { ok:false, queued:false };
+  try{
+    const q = supa.from(table).insert([row]);
+    const { data, error } = (opts && opts.select) ? await q.select() : await q;
+    if(error) throw error;
+    return { ok:true, data };
+  }catch(e){
+    console.warn("Could not sync to " + table, e);
+    if(isPermanentDbError(e)) return { ok:false, queued:false, error:e };
+    Outbox.add(table, row);
+    return { ok:false, queued:true, error:e };
+  }
+}
+function syncFailBanner(res, what){
+  if(res.ok) return;
+  if(res.queued) setBanner("connecting", "🟡 " + what + " saved on this device — it will send automatically when the connection is back");
+  else setBanner("error", "🔴 " + what + " was rejected by the shared backend — please check the form and try again");
+}
+window.addEventListener("online", () => { Outbox.flush(); });
+
 async function submitReport(report){
   if(!SpamGuard.check("rating", report.comment).ok) return;
   report.comment = SpamGuard.sanitizeText(report.comment, 500);
@@ -2391,17 +2457,12 @@ async function submitReport(report){
   openRows.add(report.isp);
   renderAll();
   if(supa){
-    try{
-      const { error } = await supa.from("qos_reports").insert([{
-        site: SITE_ID,
-        isp: report.isp, stars: report.stars, city: report.city, area: report.area || null, comment: report.comment,
-        device_id: SpamGuard.deviceId()
-      }]);
-      if(error) throw error;
-    }catch(e){
-      console.warn("Could not sync rating to shared backend — kept locally only", e);
-      setBanner("error", "🔴 Rating saved locally, but couldn't reach the shared backend to sync it");
-    }
+    const res = await syncInsert("qos_reports", {
+      site: SITE_ID,
+      isp: report.isp, stars: report.stars, city: report.city, area: report.area || null, comment: report.comment,
+      device_id: SpamGuard.deviceId()
+    });
+    syncFailBanner(res, "Rating");
   }
 }
 
@@ -2428,14 +2489,15 @@ async function submitFeedback(){
   btn.disabled = true;
   status.textContent = "Sending…";
   try{
-    const { error } = await supa.from("tester_feedback").insert([payload]);
-    if(error) throw error;
-    status.textContent = "✅ Thanks — feedback sent.";
-    document.getElementById("fbComment").value = "";
-    document.getElementById("fbCity").value = "";
-  }catch(e){
-    console.warn("Could not send feedback", e);
-    status.textContent = "🔴 Couldn't send feedback — check your connection and try again.";
+    const res = await syncInsert("tester_feedback", payload);
+    if(res.ok || res.queued){
+      status.textContent = res.ok ? "✅ Thanks — feedback sent."
+        : "🟡 Saved on this device — it will send automatically when the connection is back.";
+      document.getElementById("fbComment").value = "";
+      document.getElementById("fbCity").value = "";
+    }else{
+      status.textContent = "🔴 Feedback was rejected — please check the form and try again.";
+    }
   }finally{
     btn.disabled = false;
   }
@@ -2450,17 +2512,12 @@ async function submitStatus(entry){
   openRows.add(entry.isp);
   renderAll();
   if(supa){
-    try{
-      const { error } = await supa.from("status_reports").insert([{
-        site: SITE_ID,
-        isp: entry.isp, city: entry.city, area: entry.area || null, status: entry.status, comment: entry.comment,
-        device_id: SpamGuard.deviceId()
-      }]);
-      if(error) throw error;
-    }catch(e){
-      console.warn("Could not sync status report to shared backend — kept locally only", e);
-      setBanner("error", "🔴 Status report saved locally, but couldn't reach the shared backend to sync it");
-    }
+    const res = await syncInsert("status_reports", {
+      site: SITE_ID,
+      isp: entry.isp, city: entry.city, area: entry.area || null, status: entry.status, comment: entry.comment,
+      device_id: SpamGuard.deviceId()
+    });
+    syncFailBanner(res, "Status report");
   }
 }
 
@@ -2494,19 +2551,10 @@ async function submitSpeed(entry){
       connection_type: entry.connection_type ?? null,
       device_type: entry.device_type ?? null
     };
-    try{
-      const { error } = await supa.from("speed_reports").insert([richRow]);
-      if(error) throw error;
-    }catch(e){
-      try{
-        const { error: error2 } = await supa.from("speed_reports").insert([baseRow]);
-        if(error2) throw error2;
-        console.warn("Synced with base columns only — run the speed_reports migration in matokipedo-isp-tracker-qc's SKILL.md to store the richer auto-test metrics too.", e);
-      }catch(e2){
-        console.warn("Could not sync speed test to shared backend — kept locally only", e2);
-        setBanner("error", "🔴 Speed test saved locally, but couldn't reach the shared backend to sync it");
-      }
-    }
+    // speed_reports has carried the rich columns since v1.1.0's migration; baseRow stays as the
+    // documented minimum shape.
+    const res = await syncInsert("speed_reports", richRow);
+    syncFailBanner(res, "Speed test");
   }
 }
 
@@ -2518,16 +2566,12 @@ async function submitConversion(entry){
   saveLocalConversions(CONVERSIONS);
   renderAll();
   if(supa){
-    try{
-      const { error } = await supa.from("conversions").insert([{
-        site: SITE_ID,
-        to_isp: entry.to_isp, from_isp: entry.from_isp, reasons: entry.reasons, city: entry.city, area: entry.area || null, comment: entry.comment,
-        device_id: SpamGuard.deviceId()
-      }]);
-      if(error) throw error;
-    }catch(e){
-      console.warn("Could not sync signup/switch report to shared backend — kept locally only", e);
-    }
+    const res = await syncInsert("conversions", {
+      site: SITE_ID,
+      to_isp: entry.to_isp, from_isp: entry.from_isp, reasons: entry.reasons, city: entry.city, area: entry.area || null, comment: entry.comment,
+      device_id: SpamGuard.deviceId()
+    });
+    syncFailBanner(res, "Switch/signup report");
   }
 }
 
@@ -2542,15 +2586,12 @@ async function submitTranslation(sugg){
   saveLocalTranslations(TRANSLATIONS);
   renderTranslatePanel();
   if(supa){
-    try{
-      const { data, error } = await supa.from("translations").insert([{
-        site: SITE_ID,
-        lang: sugg.lang, string_key: sugg.string_key, suggested_text: sugg.suggested_text, source_note: sugg.source_note,
-        device_id: SpamGuard.deviceId()
-      }]).select();
-      if(error) throw error;
-      if(data && data[0]){ sugg.id = data[0].id; saveLocalTranslations(TRANSLATIONS); }
-    }catch(e){ console.warn("Translation suggestion sync failed", e); }
+    const res = await syncInsert("translations", {
+      site: SITE_ID,
+      lang: sugg.lang, string_key: sugg.string_key, suggested_text: sugg.suggested_text, source_note: sugg.source_note,
+      device_id: SpamGuard.deviceId()
+    }, { select: true });
+    if(res.ok && res.data && res.data[0]){ sugg.id = res.data[0].id; saveLocalTranslations(TRANSLATIONS); }
   }
 }
 
@@ -2705,10 +2746,7 @@ async function logReferralClick(isp, context){
   REFERRAL_CLICKS.push(entry);
   saveLocalReferrals(REFERRAL_CLICKS);
   if(supa){
-    try{
-      const { error } = await supa.from("referral_clicks").insert([{ site: SITE_ID, isp: entry.isp, context: entry.context }]);
-      if(error) throw error;
-    }catch(e){ console.warn("Could not sync referral click to shared backend", e); }
+    await syncInsert("referral_clicks", { site: SITE_ID, isp: entry.isp, context: entry.context, device_id: SpamGuard.deviceId() });
   }
 }
 
