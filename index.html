@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.6.0">
+<meta name="app-version" content="1.6.1">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -630,7 +630,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.6.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.6.1 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -3499,10 +3499,10 @@ async function runAutoSpeedTest(rowEl, downInput, upInput, autoBtn, statusEl){
       test.onResultsChange = ()=>{
         try{
           const p = test.results.getSummary();
-          if(statusEl && (p.download!=null || p.upload!=null)){
+          if(statusEl && (p.download > 0 || p.upload > 0)){
             statusEl.textContent = t("speed_auto_progress")
-              .replace("{down}", p.download!=null ? (p.download/1e6).toFixed(1) : "…")
-              .replace("{up}", p.upload!=null ? (p.upload/1e6).toFixed(1) : "…");
+              .replace("{down}", p.download > 0 ? (p.download/1e6).toFixed(1) : "…")
+              .replace("{up}", p.upload > 0 ? (p.upload/1e6).toFixed(1) : "…");
           }
         }catch(e){}
       };
@@ -3517,10 +3517,12 @@ async function runAutoSpeedTest(rowEl, downInput, upInput, autoBtn, statusEl){
     rowEl.dataset.speedExtra = JSON.stringify({
       test_method: "auto",
       latency_idle_ms: s.latency ?? null,
-      latency_download_ms: s.downLoadedLatency ?? null,
-      latency_upload_ms: s.upLoadedLatency ?? null,
-      jitter_download_ms: s.downLoadedJitter ?? null,
-      jitter_upload_ms: s.upLoadedJitter ?? null,
+      // Loaded latency/jitter aren't measured in this light profile — the library reports 0 for
+      // "not measured", which would read as a perfect score, so store null unless it's a real value.
+      latency_download_ms: s.downLoadedLatency > 0 ? s.downLoadedLatency : null,
+      latency_upload_ms: s.upLoadedLatency > 0 ? s.upLoadedLatency : null,
+      jitter_download_ms: s.downLoadedJitter > 0 ? s.downLoadedJitter : null,
+      jitter_upload_ms: s.upLoadedJitter > 0 ? s.upLoadedJitter : null,
       packet_loss_pct: s.packetLoss!=null ? s.packetLoss*100 : null,
       connection_type: (navigator.connection && navigator.connection.effectiveType) || null,
       device_type: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop"

@@ -7,6 +7,13 @@ All notable changes to the Zimbabwe ISP Tracker are recorded here. Format follow
 The version number shown here matches the `<meta name="app-version">` tag in `index.html`
 and the `v{version}` badge in each page's footer.
 
+## [1.6.1] — 2026-09-23
+
+### Fixed
+- Automatic speed test stored loaded latency/jitter as `0` (the library's "not measured" value, which
+  reads as a perfect score) — now stored as empty. Live progress no longer flashes "↓ 0.0 Mbps".
+  Verified live on the Zimbabwe site: 211.7 Mbps ↓ / 154.3 Mbps ↑ filled in automatically.
+
 ## [1.6.0] — 2026-09-23
 
 ### Fixed
