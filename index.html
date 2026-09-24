@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.5.0">
+<meta name="app-version" content="1.6.0">
 <title>Zimbabwe ISP Tracker</title>
 <style>
   :root{
@@ -630,7 +630,7 @@
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.5.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.6.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -948,6 +948,7 @@ const I18N = {
     speed_auto_unsupported: "Automatic testing isn't supported in this browser — enter your numbers manually below.",
     speed_auto_loading: "Loading the speed test tool…",
     speed_auto_load_failed: "Couldn't load the automatic speed test (network or ad-blocker issue) — enter your numbers manually below.",
+    speed_auto_progress: "Measuring… ↓ {down} Mbps · ↑ {up} Mbps so far",
     speed_auto_failed: "Couldn't complete the automatic test — enter your numbers manually below.",
     speed_method_auto: "Automatic",
     speed_method_manual: "Manual"
@@ -1596,6 +1597,14 @@ const TRANSLATABLE_KEYS = Object.keys(I18N.en);
 
 let currentLang = "en";
 try{ currentLang = localStorage.getItem("zw_isp_lang") || "en"; }catch(e){}
+// ?lang=xx (used by the Lite pages' "full tracker" links) wins over the remembered choice.
+try{
+  const qLang = new URLSearchParams(location.search).get("lang");
+  if(qLang && Object.prototype.hasOwnProperty.call(I18N, qLang)){
+    currentLang = qLang;
+    try{ localStorage.setItem(SITE_ID + "_isp_lang", currentLang); }catch(e){}
+  }
+}catch(e){}
 let translationOverrides = {};
 
 function t(key){
@@ -2804,7 +2813,7 @@ function referralUrlFor(isp, context){
   try{
     const url = new URL(cfg.url);
     if(cfg.code) url.searchParams.set("ref", cfg.code);
-    url.searchParams.set("utm_source", "zw-isp-tracker");
+    url.searchParams.set("utm_source", SITE_ID + "-isp-tracker");
     url.searchParams.set("utm_medium", "referral");
     url.searchParams.set("utm_campaign", context || "detail");
     return url.toString();
@@ -3458,26 +3467,49 @@ async function runAutoSpeedTest(rowEl, downInput, upInput, autoBtn, statusEl){
     }
   }
   autoBtn.disabled = true;
+  delete rowEl.dataset.speedExtra;   // never let a previous run's metrics ride along with this one
   if(statusEl) statusEl.textContent = t("speed_auto_running");
   try{
     const test = new window.__CFSpeedTest({
-      autoStart: true,
-      // A deliberately light measurement profile — this audience includes people on
-      // metered/expensive mobile data, so we favor "usually a few MB" over exhaustive
-      // accuracy. See SKILL.md for the reasoning and how to tune this.
+      autoStart: false,
+      // Don't POST each visitor's result to Cloudflare's own analytics endpoint.
+      logAimApiUrl: null,
+      // A deliberately light measurement profile (~4 MB) — this audience includes people on
+      // metered/expensive mobile data, so we favor "usually a few MB" over exhaustive accuracy.
+      // NO packetLoss step: it needs TURN credentials from speed.cloudflare.com/turn-creds, which
+      // only answers speed.cloudflare.com itself (CORS). From our origin it always failed, fired
+      // onError, and — because onError used to reject — threw away perfectly good download/upload
+      // results, so the automatic test "failed" for every visitor (found live 2026-09-23).
       measurements: [
         { type: "latency", numPackets: 1 },
+        { type: "download", bytes: 1e5, count: 1, bypassMinDuration: true },
         { type: "download", bytes: 1e6, count: 3 },
         { type: "latency", numPackets: 20 },
-        { type: "upload", bytes: 5e5, count: 3 },
-        { type: "packetLoss", numPackets: 500 }
+        { type: "upload", bytes: 1e5, count: 1, bypassMinDuration: true },
+        { type: "upload", bytes: 5e5, count: 3 }
       ]
     });
-    await new Promise((resolve, reject)=>{
-      test.onFinish = ()=>resolve();
-      test.onError = (err)=>reject(err);
+    const outcome = await new Promise((resolve)=>{
+      let done = false;
+      const finish = (ok, err)=>{ if(done) return; done = true; clearTimeout(timer); resolve({ ok, err }); };
+      const timer = setTimeout(()=>{ try{ test.pause(); }catch(e){} finish(false, "timeout"); }, 60000);
+      test.onFinish = ()=> finish(true);
+      // Fatal errors (latency/bandwidth) pause the engine; anything else is logged and the run continues.
+      test.onError = (err)=>{ console.warn("Speed test measurement error", err); if(!test.isRunning) finish(false, err); };
+      test.onResultsChange = ()=>{
+        try{
+          const p = test.results.getSummary();
+          if(statusEl && (p.download!=null || p.upload!=null)){
+            statusEl.textContent = t("speed_auto_progress")
+              .replace("{down}", p.download!=null ? (p.download/1e6).toFixed(1) : "…")
+              .replace("{up}", p.upload!=null ? (p.upload/1e6).toFixed(1) : "…");
+          }
+        }catch(e){}
+      };
+      test.play();
     });
     const s = test.results.getSummary();
+    if(s.download==null && s.upload==null) throw new Error(String(outcome.err || "no measurements"));
     const downloadMbps = s.download!=null ? s.download/1e6 : null;
     const uploadMbps = s.upload!=null ? s.upload/1e6 : null;
     if(downloadMbps!=null) downInput.value = downloadMbps.toFixed(1);
@@ -3657,8 +3689,18 @@ document.querySelectorAll(".lang-chip").forEach(chip=>{
     currentLang = chip.getAttribute("data-lang");
     try{ localStorage.setItem("zw_isp_lang", currentLang); }catch(e){}
     renderAll();
+    updateLiteLinks();
   });
 });
+
+/* Lite pages that exist for this site (generated by zwispqosp/tools/build_lite.py — keep in sync;
+   `build_lite.py --check` verifies it). Every "Lite version" link follows the chosen language. */
+const LITE_LANGS = ["sn", "nd", "ny", "st", "tn", "ve", "xh", "ts"];
+function updateLiteLinks(){
+  const href = (currentLang !== "en" && LITE_LANGS.indexOf(currentLang) >= 0) ? "lite-" + currentLang + ".html" : "lite.html";
+  document.querySelectorAll('a[href^="lite"]').forEach(a=> a.setAttribute("href", href));
+}
+updateLiteLinks();
 
 document.getElementById("simpleModeToggle").addEventListener("click", ()=>{
   const btn = document.getElementById("simpleModeToggle");
