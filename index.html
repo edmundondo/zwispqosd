@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="1.6.1">
+<meta name="app-version" content="1.7.0">
 <title>Zimbabwe ISP Tracker</title>
+<meta name="description" content="Independent, crowdsourced quality ratings, outage reports and speed tests for POTRAZ-licensed internet providers in Zimbabwe. A Matokipedo project, not affiliated with POTRAZ or any provider.">
 <style>
   :root{
     --bg:#0b0f14;
@@ -431,12 +432,12 @@
 </script>
 <div class="wrap">
   <header>
-    <div class="eyebrow">POTRAZ · Zimbabwe Telecoms</div>
+    <div class="eyebrow">Independent tracker · POTRAZ-licensed providers</div>
     <h1>Zimbabwe ISP Tracker</h1>
-    <div class="sub">10 licensed providers · mobile &amp; fixed/wireless internet access · last synced from POTRAZ Q4 2024–Q4 2025 sector reports</div>
+    <div class="sub">10 licensed providers · mobile &amp; fixed/wireless internet access · provider figures from POTRAZ Q4 2024–Q4 2025 sector reports</div>
     <div><span class="privacy-note">📍 Your GPS location is only used in your browser to work out the nearest tracked city — raw coordinates are never sent anywhere. Only the city name, star rating and comment are shared.</span></div>
     <div><span class="privacy-note">📱 On an older phone, a dot-matrix screen, or a slow connection? <a href="lite.html" style="color:inherit;">Try the no-script Lite version</a> — tiny download, works without JavaScript, includes an SMS rating option.</span></div>
-    <div><span class="backend-banner mode-local" id="backendBanner">🟡 Local demo mode — connect a free Supabase backend to make ratings shared (see README.md)</span></div>
+    <div><span class="backend-banner mode-connecting" id="backendBanner">⏳ Connecting to shared backend…</span></div>
     <div id="iodaBadge"></div>
     <div class="status-legend" id="statusLegend">
       <span class="legend-item"><span class="status-dot" style="background:var(--green)"></span> <span id="legendLiveLabel">Live</span></span>
@@ -629,8 +630,9 @@
       <img src="matokipedo-logo.jpg" alt="Matokipedo logo" class="matokipedo-logo">
       <span class="matokipedo-tagline">Live infrastructure monitoring by Matokipedo</span>
     </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">Independent project — not affiliated with or endorsed by POTRAZ or any provider listed.</div>
     <span class="reset-link" id="resetQos">refresh / reset local data</span>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.6.1 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">v1.7.0 &middot; <a href="CHANGELOG.md" style="color:inherit;">changelog</a></div>
   </footer>
 </div>
 
@@ -861,7 +863,7 @@ const I18N = {
   en: {
     lang_label: "Language",
     translate_help: "Help translate / suggest a correction",
-    banner_local: "🟡 Local demo mode — connect a free Supabase backend to make ratings shared (see README.md)",
+    banner_local: "🔴 Couldn't reach the shared backend — showing locally cached data only",
     banner_connecting: "⏳ Connecting to shared backend…",
     banner_live: "🟢 Connected — ratings are shared with every visitor (Supabase)",
     banner_error: "🔴 Couldn't reach the shared backend — showing locally cached data only",
@@ -956,7 +958,7 @@ const I18N = {
   sn: {
     lang_label: "Mutauro",
     translate_help: "Batsira Kushandura / Ipa Ndudziro Iri Nani",
-    banner_local: "🟡 Modhi yepaduku — batanidza Supabase (mahara) kuti data igoverwe (ona README.md)",
+    banner_local: "🔴 Zvatadza kubatana ne-network yakagoverwa — zviri kuratidza data yakachengetwa pane iyi bhurawuza chete",
     banner_connecting: "⏳ Kubatana ne-network yakagoverwa…",
     banner_live: "🟢 Zvabatana — data iri kugoverwa nevashandisi vose (Supabase)",
     banner_error: "🔴 Zvatadza kubatana ne-network yakagoverwa — zviri kuratidza data yakachengetwa pane iyi bhurawuza chete",
@@ -1019,7 +1021,7 @@ const I18N = {
   nd: {
     lang_label: "Ulimi",
     translate_help: "Siza Ukuhumutsha / Phakamisa Ukulungiswa",
-    banner_local: "🟡 Imodi Yasendlalelo — xhuma i-Supabase (yamahhala) ukuze idatha yabelwane (bona README.md)",
+    banner_local: "🔴 Kwehlulekile ukufinyelela kunethiwekhi eyabelwene — kutshengiswa idatha egcinwe kulesi siphequluli kuphela",
     banner_connecting: "⏳ Iyaxhumana lenethiwekhi eyabiwe…",
     banner_live: "🟢 Kuxhunyiwe — idatha iyabelwana labo bonke abavakashi (Supabase)",
     banner_error: "🔴 Kwehlulekile ukufinyelela kunethiwekhi eyabelwene — kutshengiswa idatha egcinwe kulesi siphequluli kuphela",
@@ -1082,7 +1084,7 @@ const I18N = {
   kck: { // best-effort draft, unreviewed — LOWER confidence than sn/nd/tn, please prioritize native-speaker review (see README)
     lang_label: "Mulaka",
     translate_help: "Batsira kubudulula / nyika kulungiswa",
-    banner_local: "🟡 Modhi yekumusha — bhatanidza Supabase (mahala) kuti dhata igovanwe (ona README.md)",
+    banner_local: "🔴 Kwakundikana kusvika ku network inogovanwa — kuratidza dhata yakachengetwa mubhurawuza iyi bedzi",
     banner_connecting: "⏳ Kubhatana ne network inogovanwa…",
     banner_live: "🟢 Yabhatana — dhata inogovanwa nevaeni vose (Supabase)",
     banner_error: "🔴 Kwakundikana kusvika ku network inogovanwa — kuratidza dhata yakachengetwa mubhurawuza iyi bedzi",
@@ -1145,7 +1147,7 @@ const I18N = {
   ny: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
     lang_label: "Chinenero",
     translate_help: "Thandizani kumasulira / perekani kukonzedwa",
-    banner_local: "🟡 Njira yakomweko — lumikizani ndi Supabase (yaulere) kuti deta igawidwe (onani README.md)",
+    banner_local: "🔴 Zalephera kufikira netiweki yogawana — kukuonetsa deta yosungidwa mu bulawuza iyi yokha",
     banner_connecting: "⏳ Kulumikizana ndi netiweki yogawana…",
     banner_live: "🟢 Yalumikizidwa — deta ikugawidwa ndi alendo onse (Supabase)",
     banner_error: "🔴 Zalephera kufikira netiweki yogawana — kukuonetsa deta yosungidwa mu bulawuza iyi yokha",
@@ -1212,7 +1214,7 @@ const I18N = {
   ts: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
     lang_label: "Ririmi",
     translate_help: "Pfuna ku hundzuluxa / nyika nhlamuselo leyi lulamisiweke",
-    banner_local: "🟡 Muxaka wa laha kaya — hlanganisa Supabase (mahala) leswaku vuxokoxoko byi avelana (vona README.md)",
+    banner_local: "🔴 Swi tsandzekile ku fikelela network leyi avelanaka — swi kombisa vuxokoxoko lebyi hlayisiweke eka bulawuza leyi ntsena",
     banner_connecting: "⏳ Ya hlanganisa na network leyi avelanaka…",
     banner_live: "🟢 Yi hlanganisiwile — vuxokoxoko byi avelana na vaendzi hinkwavo (Supabase)",
     banner_error: "🔴 Swi tsandzekile ku fikelela network leyi avelanaka — swi kombisa vuxokoxoko lebyi hlayisiweke eka bulawuza leyi ntsena",
@@ -1275,7 +1277,7 @@ const I18N = {
   st: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
     lang_label: "Puo",
     translate_help: "Thusa ho fetolela / fana ka tokiso",
-    banner_local: "🟡 Mokgwa wa lehae — hokela Supabase (mahala) hore data e arolelanwe (bona README.md)",
+    banner_local: "🔴 Ho hlolehile ho fihlella network e arolelanwang — ho bontsha data e bolokilweng ho browser ena feela",
     banner_connecting: "⏳ E hokela le network e arolelanwang…",
     banner_live: "🟢 E hokahane — data e arolelanwa le baeti bohle (Supabase)",
     banner_error: "🔴 Ho hlolehile ho fihlella network e arolelanwang — ho bontsha data e bolokilweng ho browser ena feela",
@@ -1338,7 +1340,7 @@ const I18N = {
   toi: { // best-effort draft, unreviewed — LOWER confidence than sn/nd/tn, please prioritize native-speaker review (see README)
     lang_label: "Mwaambo",
     translate_help: "Amugwasye kusandulula / kupa lulamiko",
-    banner_local: "🟡 Nzila yamuno — amuvwelane a Supabase (yalubbi) kutegwa zibalo zyaabane (amubone README.md)",
+    banner_local: "🔴 Kwakachitika lubo kusika kunethiwekki iyaabana — kutondezya zibalo zibambidwe muzu bulawuza ooyu buyo",
     banner_connecting: "⏳ Kuyanzana anethiwekki iyaabana…",
     banner_live: "🟢 Yavwelanisigwa — zibalo ziyaabana abeenzu boonse (Supabase)",
     banner_error: "🔴 Kwakachitika lubo kusika kunethiwekki iyaabana — kutondezya zibalo zibambidwe muzu bulawuza ooyu buyo",
@@ -1401,7 +1403,7 @@ const I18N = {
   tn: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
     lang_label: "Puo",
     translate_help: "Thusa go ranola / tshitsa phoso",
-    banner_local: "🟡 Tekanyo ya lefelo — golaganya Supabase (mahala) go abelana data (bona README.md)",
+    banner_local: "🔴 Go paletswe go fitlha kwa networking e e abelanwang — go bontsha data e e bolokilweng mo browser fela",
     banner_connecting: "⏳ E golaganya le network e e abelanwang…",
     banner_live: "🟢 E golaganeditswe — dipego di abelanwa le baeng botlhe (Supabase)",
     banner_error: "🔴 Go paletswe go fitlha kwa networking e e abelanwang — go bontsha data e e bolokilweng mo browser fela",
@@ -1464,7 +1466,7 @@ const I18N = {
   ve: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
     lang_label: "Luambo",
     translate_help: "Thusani u ṱalutshedza / ni ṋee vhulungami",
-    banner_local: "🟡 Nzira ya hayani — vhambedzani na Supabase (mahala) uri data i kovhelane (sedzani README.md)",
+    banner_local: "🔴 Zwo kundelela u swikelela nethiwekhe ine ya kovhelanwa — zwi khou sumela data yo vhulungwaho kha burausa heyi fhedzi",
     banner_connecting: "⏳ I khou vhambedzana na nethiwekhe ine ya kovhelanwa…",
     banner_live: "🟢 Yo vhambedzana — data i kovhelana na vhaeni vhoṱhe (Supabase)",
     banner_error: "🔴 Zwo kundelela u swikelela nethiwekhe ine ya kovhelanwa — zwi khou sumela data yo vhulungwaho kha burausa heyi fhedzi",
@@ -1527,7 +1529,7 @@ const I18N = {
   xh: { // best-effort draft, unreviewed (same status as ChiShona/IsiNdebele — see README)
     lang_label: "Ulwimi",
     translate_help: "Nceda uguqulele / cebisa ulungiso",
-    banner_local: "🟡 Imowudi yasekhaya — dibanisa i-Supabase (yamahhala) ukuze idatha yabelwane (jonga i-README.md)",
+    banner_local: "🔴 Kwehlulekile ukufikelela kumthungelwano owabelwanayo — kubonisa idatha egciniweyo kule browser kuphela",
     banner_connecting: "⏳ Iyaqhagamshelana nomthungelwano owabelwanayo…",
     banner_live: "🟢 Kudibanisiwe — idatha yabelwana nabo bonke abatyeleli (Supabase)",
     banner_error: "🔴 Kwehlulekile ukufikelela kumthungelwano owabelwanayo — kubonisa idatha egciniweyo kule browser kuphela",

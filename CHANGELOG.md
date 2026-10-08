@@ -7,6 +7,23 @@ All notable changes to the Zimbabwe ISP Tracker are recorded here. Format follow
 The version number shown here matches the `<meta name="app-version">` tag in `index.html`
 and the `v{version}` badge in each page's footer.
 
+## [1.7.0] — 2026-10-07
+
+### Changed
+- Header line no longer reads like a regulator endorsement: "POTRAZ · … Telecoms" is now
+  "Independent tracker · POTRAZ-licensed providers". Lite pages regenerated with the same line.
+- Header data note says "provider figures from …" instead of "last synced from …" (the figures are
+  sourced references, not a live feed).
+- New footer line and page description: independent project, not affiliated with or endorsed by
+  POTRAZ or any provider listed.
+
+### Fixed
+- Visitors (and link previews / search engines) could see the developer message "Local demo mode —
+  connect a free Supabase backend … (see README.md)" before the page's script ran, or whenever the
+  backend library failed to load. The page now starts on "Connecting to shared backend…", and the
+  no-backend fallback uses each language's existing "Couldn't reach the shared backend — showing
+  locally cached data only" text.
+
 ## [1.6.1] — 2026-09-23
 
 ### Fixed
